@@ -116,14 +116,12 @@ html, body {
   }
   
   .signal-label{
-    height: 20px;
+    height: 38px;
     text-align: right;
-    background-color: #363842;
     color: white;
     font-size: 12px;
-    padding: 5px;
-    padding-bottom: 10px;
-    vertical-align: baseline;
+    padding-right: 0px;
+    vertical-align:middle;
   }
 
   .signal-label:hover {

@@ -2,11 +2,12 @@
 import { useEffect, useRef } from "react";
 
 //returns the main layer of the canvas, with all the signals rendered onto it
-export default function SignalWindow({signals, dx, dy, offsetY, timeStamp, signalCount, onClick})
+export default function SignalWindow({signals, renderSequence, dx, dy, offsetY, timeStamp, signalCount, onClick, onMove})
 {
   const signalWindowRef = useRef(null);
   const isDragging    = useRef(false);
 
+  //handles mouse events, returns mouse click position index
   useEffect(()=>{
     console.log("Click Effect invoked");
     const mainCanvas = signalWindowRef.current;
@@ -19,18 +20,31 @@ export default function SignalWindow({signals, dx, dy, offsetY, timeStamp, signa
       onClick({x, y});
     }
   
+
+    function handleMouseMove(event)
+    {
+      const rect = mainCanvas.getBoundingClientRect();
+      const x = Math.floor((event.clientX - rect.left) / dx);
+      const y = Math.floor((event.clientY - rect.top) / (dy + offsetY));
+      onMove({x, y});
+    }
+
     mainCanvas.addEventListener("mousedown", handleMouseDown);
+    mainCanvas.addEventListener("mousemove", handleMouseMove);
   
   
     return () => {
       mainCanvas.removeEventListener("mousedown", handleMouseDown);
+      mainCanvas.removeEventListener("mousemove", handleMouseMove);
     };
-    }, [onClick, dx, dy, signalCount]);
+    }, [onClick, onMove, dx, dy, signalCount, offsetY]);
 
+  //Renders the signals on the canvas  
   useEffect(()=>{
     const mainCanvas = signalWindowRef.current;
-    renderAllSignals(mainCanvas, signals, dx, dy, timeStamp, signalCount)
-  }, [signals, dx, dy, offsetY, timeStamp, signalCount]);
+    renderAllSignals(mainCanvas, renderSequence, signals, dx, dy, timeStamp, signalCount)
+  }, [signals, renderSequence, dx, dy, offsetY, timeStamp, signalCount]);
+
 
   return(
     <canvas ref={signalWindowRef} id="mainLayer" width={timeStamp * dx} height={signalCount * (dy + offsetY)}/>
@@ -39,15 +53,15 @@ export default function SignalWindow({signals, dx, dy, offsetY, timeStamp, signa
 
 
 //renders all the signals on the grid
-function renderAllSignals(mainCanvas, signals, dx, dy, timeStamp, signalCount)
+function renderAllSignals(mainCanvas, sequence, signals, dx, dy, timeStamp, signalCount)
 {
     var offsetY = 8;
-    console.log("Rendering " + signals.length + " signals with Settings: dx: " + dx + " dy: " + dy);
+    console.log("Rendering " + sequence.length + " signals with Settings: dx: " + dx + " dy: " + dy);
     var ctx = mainCanvas.getContext("2d");
     ctx.clearRect(0, 0, dx * timeStamp, (dy + offsetY)* signalCount);
     ctx.strokeStyle = "#ffffff";
-    for(var i = 0; i < signals.length; i++){
-        var signal = signals[i].data;
+    for(var i = 0; i < sequence.length; i++){
+        var signal = signals[sequence[i]].data;
         renderSignal(ctx, signal, i, parseInt(dx), parseInt(dy), offsetY);
     }
 }
