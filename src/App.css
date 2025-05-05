@@ -158,10 +158,16 @@ html, body {
     margin-top:5%;
   }
 
-  input[type="text"] {
-    width: 95%;
-    margin-top:5%;
-    margin-bottom: 5%;
+  .input[type="text"] {
+    color: #fff;
+    font-size: 0.9rem;
+    background-color: rgba(0, 0, 0, .1);
+    width: 100%;
+    box-sizing: border-box;
+    padding-inline: 0.5em;
+    padding-block: 0.7em;
+    border: none;
+    border-bottom: 1px solid white;
   }
 
   .button-6 {

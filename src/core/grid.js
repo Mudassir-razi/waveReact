@@ -2,7 +2,7 @@
 import { settings } from "./config.js";
 import { useEffect, useRef } from "react";
 
-export default function Grid({dx, dy, mouse, offsetY, timeStamp, signalCount}){
+export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetY, timeStamp, signalCount}){
 
     const canvasRef = useRef(null);
     
@@ -26,13 +26,16 @@ export default function Grid({dx, dy, mouse, offsetY, timeStamp, signalCount}){
         //     ctx.lineTo(width, y);
         //     ctx.stroke();
         // }
+        
         ctx.beginPath();
         ctx.rect(0, mouse[1] * (dy + offsetY), dx * timeStamp, dy+offsetY);
-        ctx.stroke();
+        ctx.fillStyle="rgba(255, 255, 255, 0.10)";
+        ctx.fill();
         //vertical lines
         for(var i = 0; i <= timeStamp; i++){
             var x = i * dx;
-            ctx.lineWidth = i === mouse[0] || i === mouse[0] + 1 ? 2 : 1;
+            if(!dragging)ctx.lineWidth = i === mouse[0] || i === mouse[0] + 1 ? 2 : 1;
+            else ctx.lineWidth = i === mouse[0]+1 || i === prevMouse[0] ? 3 : 1;
             ctx.beginPath();
             ctx.setLineDash([5, 5])
             ctx.moveTo(x, 0);
@@ -40,7 +43,7 @@ export default function Grid({dx, dy, mouse, offsetY, timeStamp, signalCount}){
             ctx.stroke();
         }
 
-    }, [dx, dy, mouse, timeStamp, signalCount, offsetY]);
+    }, [dx, dy, mouse, prevMouse, dragging, timeStamp, signalCount, offsetY]);
 
     return(
         <canvas ref={canvasRef} id="bgLayer" width={timeStamp * dx} height={signalCount * (dy + offsetY)} style={{backgroundColor: settings.bgColor}}></canvas>

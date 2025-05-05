@@ -2,22 +2,19 @@
 import { useEffect, useRef } from "react";
 
 //returns the main layer of the canvas, with all the signals rendered onto it
-export default function SignalWindow({signals, renderSequence, dx, dy, offsetY, timeStamp, signalCount, onClick, onMove})
+export default function SignalWindow({signals, renderSequence, dx, dy, offsetY, timeStamp, signalCount, onDown, onMove, onUp})
 {
   const signalWindowRef = useRef(null);
-  const isDragging    = useRef(false);
 
   //handles mouse events, returns mouse click position index
   useEffect(()=>{
-    console.log("Click Effect invoked");
     const mainCanvas = signalWindowRef.current;
 
     function handleMouseDown(event) {
       const rect = mainCanvas.getBoundingClientRect();
       const x = Math.floor((event.clientX - rect.left) / dx);
       const y = Math.floor((event.clientY - rect.top) / (dy + offsetY));
-      isDragging.current = true;
-      onClick({x, y});
+      onDown({x, y});
     }
   
 
@@ -29,15 +26,25 @@ export default function SignalWindow({signals, renderSequence, dx, dy, offsetY, 
       onMove({x, y});
     }
 
+    function handleMouseUp(event)
+    {
+      const rect = mainCanvas.getBoundingClientRect();
+      const x = Math.floor((event.clientX - rect.left) / dx);
+      const y = Math.floor((event.clientY - rect.top) / (dy + offsetY));
+      onUp({x, y})
+    }
+
     mainCanvas.addEventListener("mousedown", handleMouseDown);
     mainCanvas.addEventListener("mousemove", handleMouseMove);
+    mainCanvas.addEventListener("mouseup", handleMouseUp);
   
   
     return () => {
       mainCanvas.removeEventListener("mousedown", handleMouseDown);
       mainCanvas.removeEventListener("mousemove", handleMouseMove);
+      mainCanvas.removeEventListener("mouseup", handleMouseUp);
     };
-    }, [onClick, onMove, dx, dy, signalCount, offsetY]);
+    }, [onDown, onMove, onUp, dx, dy, signalCount, offsetY]);
 
   //Renders the signals on the canvas  
   useEffect(()=>{
@@ -62,18 +69,50 @@ function renderAllSignals(mainCanvas, sequence, signals, dx, dy, timeStamp, sign
     ctx.strokeStyle = "#ffffff";
     for(var i = 0; i < sequence.length; i++){
         var signal = signals[sequence[i]].data;
-        renderSignal(ctx, signal, i, parseInt(dx), parseInt(dy), offsetY);
+        renderSignal(ctx, signal, i, parseInt(dx), parseInt(dy), offsetY, signals[i].width);
     }
 }
 
-function renderSignal(ctx, data, idx, dx, dy, offsetY)
+function renderSignal(ctx, data, idx, dx, dy, offsetY, lineWidth)
 {
     var posX = 0;
     var posY = (idx + 1)* (dy + offsetY);
+    var prevRenderBit;
     ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = lineWidth;
     for(var i = 0; i < data.length; i++){
       var currentBit = data[i];
       var prevBit = i === 0 ? data[i] : data[i-1];
+
+      // if(currentBit === '0')
+      // {
+      //   switch(prevBit)
+      //   {
+      //     case '0':
+      //     {
+      //       //glitch
+      //       break
+      //     }
+
+      //     case '1':
+      //     {
+      //       //negedge
+      //       break;
+      //     }
+
+      //     case '.':
+      //     {
+      //       //conditional edge
+      //       prevRenderBit === '1' ? risingEdge(ctx, posX, posY, dx, dy) : risingEdge(ctx, posX, posY, dx, dy) ;//glitch;
+      //       break;
+      //     }
+      //     default:
+      //     {
+            
+      //     } 
+      //   }
+      // }
+
       if(currentBit === '0' && prevBit === '0')
       {
           solid0(ctx, posX, posY, dx, dy);
