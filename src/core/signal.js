@@ -1,6 +1,6 @@
 
 import { useEffect, useRef } from "react";
-
+const div = 8;
 //returns the main layer of the canvas, with all the signals rendered onto it
 export default function SignalWindow({signals, renderSequence, dx, dy, offsetY, timeStamp, signalCount, onDown, onMove, onUp})
 {
@@ -17,7 +17,6 @@ export default function SignalWindow({signals, renderSequence, dx, dy, offsetY, 
       onDown({x, y});
     }
   
-
     function handleMouseMove(event)
     {
       const rect = mainCanvas.getBoundingClientRect();
@@ -37,7 +36,6 @@ export default function SignalWindow({signals, renderSequence, dx, dy, offsetY, 
     mainCanvas.addEventListener("mousedown", handleMouseDown);
     mainCanvas.addEventListener("mousemove", handleMouseMove);
     mainCanvas.addEventListener("mouseup", handleMouseUp);
-  
   
     return () => {
       mainCanvas.removeEventListener("mousedown", handleMouseDown);
@@ -77,92 +75,267 @@ function renderSignal(ctx, data, idx, dx, dy, offsetY, lineWidth)
 {
     var posX = 0;
     var posY = (idx + 1)* (dy + offsetY);
-    var prevRenderBit;
+    var prevRenderBit=data[0];
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = lineWidth;
-    for(var i = 0; i < data.length; i++){
+    for(var i = 0; i < data.length;i++){
+      //console.log(i);
       var currentBit = data[i];
       var prevBit = i === 0 ? data[i] : data[i-1];
 
-      // if(currentBit === '0')
-      // {
-      //   switch(prevBit)
-      //   {
-      //     case '0':
-      //     {
-      //       //glitch
-      //       break
-      //     }
+      if(currentBit === '0')
+      {
+        switch(prevBit)
+        {
+          case '0':
+          {
+            glitch0(ctx, posX, posY, dx, dy);
+            break
+          }
 
-      //     case '1':
-      //     {
-      //       //negedge
-      //       break;
-      //     }
+          case '1':
+          {
+            fallingEdge(ctx, posX, posY, dx, dy);
+            break;
+          }
 
-      //     case '.':
-      //     {
-      //       //conditional edge
-      //       prevRenderBit === '1' ? risingEdge(ctx, posX, posY, dx, dy) : risingEdge(ctx, posX, posY, dx, dy) ;//glitch;
-      //       break;
-      //     }
-      //     default:
-      //     {
+          case '=':
+          {
+            fallingEdge(ctx, posX, posY, dx, dy);
+            break;
+          }
+
+          case '.':
+          {
+            //conditional edge
+            if(prevRenderBit === '1')fallingEdge(ctx, posX, posY, dx, dy);
             
-      //     } 
-      //   }
-      // }
+            else if(prevRenderBit === '0')glitch0(ctx, posX, posY, dx, dy);
+            
+            else if(prevRenderBit === '=')
+            {
+              fallingEdge(ctx, posX, posY, dx, dy);
+              solid0(ctx, posX, posY, dx, dy);
+            }
+            break;
+          }
+          default:
+          {
+            
+          } 
+        }
+      }
+      else if(currentBit === '1')
+      {
+        switch(prevBit)
+        {
+          case '0':
+          {
+            risingEdge(ctx, posX, posY, dx, dy);
+            break
+          }
 
-      if(currentBit === '0' && prevBit === '0')
-      {
-          solid0(ctx, posX, posY, dx, dy);
+          case '1':
+          {
+            glitch1(ctx, posX, posY, dx, dy);
+            break;
+          }
+
+          case '=':
+          {
+            risingEdge(ctx, posX, posY, dx, dy);
+            break;
+          }
+
+          case '.':
+          {
+            //conditional edge
+            //conditional edge
+            if(prevRenderBit === '1')glitch0(ctx, posX, posY, dx, dy);
+            
+            else if(prevRenderBit === '0')risingEdge(ctx, posX, posY, dx, dy);
+            
+            else if(prevRenderBit === '=')
+            {
+              risingEdge(ctx, posX, posY, dx, dy);
+              solid1(ctx, posX, posY, dx, dy);
+            }
+            break;
+          }
+          default:
+          {
+            
+          } 
+        }
       }
-      else if(currentBit === '1' && prevBit === '1')
+
+      else if(currentBit === '=')
       {
-          solid1(ctx, posX, posY, dx, dy);
+        const dx1 = dx/div;
+        var nextBit = i+1 < data.length ? data[i+1] : '|';
+        var rep = 0;
+        for(var k = 1;k+i < data.length;k++)
+        {
+          if(data[i+k] === '.')
+          {
+            prevRenderBit = '=';
+            nextBit = k+i+1 < data.length ? data[k+i+1] : '|';
+            rep++;
+          }
+          else 
+          {
+            break;
+          }
+        }
+        console.log(nextBit);
+        ctx.beginPath();
+        ctx.moveTo(posX, posY);
+        
+        //Zero case
+        if(prevBit === '0' || (prevBit === '.' && prevRenderBit === '0'))
+        {
+          ctx.lineTo(posX + dx1, posY);
+          ctx.lineTo(posX + 2*dx1, posY - dy);
+          ctx.lineTo(posX + (1+rep)*dx + dx1, posY - dy);
+          if(nextBit === '0')
+          {
+            ctx.lineTo(posX + (1+rep)*dx + 2*dx1, posY);
+            ctx.lineTo(posX+dx1, posY);
+          }
+          else if(nextBit === '1')
+          {
+            ctx.lineTo(posX + (1+rep)*dx + 2*dx1, posY-dy);
+            ctx.lineTo(posX + (1+rep)*dx + dx1, posY);
+            ctx.lineTo(posX+dx1, posY);
+          }
+          else if(nextBit === '=')
+          {
+            ctx.lineTo(posX + (1+rep)*dx + dx1 + dx1/2, posY-dy/2);
+            ctx.lineTo(posX + (1+rep)*dx + dx1 , posY);
+            ctx.lineTo(posX+dx1, posY);
+          }
+
+          else if(nextBit === '|')
+          {
+            ctx.lineTo(posX + (1+rep)*dx + dx1, posY);
+            ctx.lineTo(posX + dx1, posY);
+            ctx.lineTo(posX+dx1, posY);
+          }
+          ctx.fill();
+          ctx.stroke();
+          ctx.closePath();
+        }
+
+        //one case
+        else if(prevBit === '1' || (prevBit === '.' && prevRenderBit === '1'))
+        {
+          ctx.moveTo(posX, posY-dy);
+          ctx.lineTo(posX + dx1, posY-dy);
+          ctx.lineTo(posX + 2*dx1, posY);
+          ctx.lineTo(posX + (1+rep)*dx + dx1, posY);
+          if(nextBit === '0')
+          {
+            ctx.lineTo(posX + (1+rep)*dx + 2*dx1, posY);
+            ctx.lineTo(posX + (1+rep)*dx + dx1, posY-dy);
+            ctx.lineTo(posX+dx1, posY-dy);
+          }
+          else if(nextBit === '1')
+          {
+            ctx.lineTo(posX + (1+rep)*dx + 2*dx1, posY-dy);
+            ctx.lineTo(posX+dx1, posY-dy);
+          }
+          else if(nextBit === '=')
+          {
+            ctx.lineTo(posX + (1+rep)*dx + dx1 + dx1/2, posY-dy/2);
+            ctx.lineTo(posX + (1+rep)*dx + dx1 , posY-dy);
+            ctx.lineTo(posX+dx1, posY-dy);
+          }
+          else if(nextBit === '|')
+          {
+            ctx.lineTo(posX + (1+rep)*dx + dx1, posY-dy);
+            ctx.lineTo(posX + dx1, posY-dy);
+            ctx.lineTo(posX+dx1, posY-dy);
+          }
+          ctx.fill();
+          ctx.stroke();
+          ctx.closePath();
+        }
+
+        //multibit case
+        else if(prevBit === '=' || (prevBit === '.' && prevRenderBit === '='))
+        {
+          ctx.moveTo(posX+dx1 + dx1/2, posY-dy/2);
+          ctx.lineTo(posX + 2*dx1, posY);
+          ctx.lineTo(posX + (1+rep)*dx + dx1, posY);
+          if(nextBit === '0')
+          {
+            ctx.lineTo(posX + (1+rep)*dx + 2*dx1, posY);
+            ctx.lineTo(posX + (1+rep)*dx + dx1, posY-dy);
+            ctx.lineTo(posX+2*dx1, posY-dy);
+            ctx.lineTo(posX+dx1+dx1/2, posY-dy/2);
+          }
+          else if(nextBit === '1')
+          {
+            ctx.lineTo(posX + (1+rep)*dx + 2*dx1, posY-dy);
+            ctx.lineTo(posX+2*dx1, posY-dy);
+            ctx.lineTo(posX+dx1+dx1/2, posY-dy/2);
+          }
+          else if(nextBit === '=')
+          {
+            ctx.lineTo(posX + (1+rep)*dx + dx1 + dx1/2, posY-dy/2);
+            ctx.lineTo(posX + (1+rep)*dx + dx1 , posY-dy);
+            ctx.lineTo(posX+2*dx1, posY-dy);
+            ctx.lineTo(posX+dx1+dx1/2, posY-dy/2);
+          }
+           else if(nextBit === '|')
+          {
+            ctx.lineTo(posX + (1+rep)*dx + dx1, posY-dy);
+            ctx.lineTo(posX+2*dx1, posY-dy);
+            ctx.lineTo(posX+dx1+dx1/2, posY-dy/2);
+          }
+
+          ctx.fill();
+          ctx.stroke();
+          ctx.closePath();
+        }
+        i = i + rep;
+        posX += dx*rep;
       }
-      else if(currentBit === '0' && prevBit === '1')
+      else if (currentBit === '.')
       {
-          fallingEdge(ctx, posX, posY, dx, dy);
-      }
-      else if(currentBit === '1' && prevBit === '0')
-      {
-          risingEdge(ctx, posX, posY, dx, dy);
+        prevRenderBit = prevBit;
+        var currentBit2 = currentBit;
+        //var nextBit = i >= data.length ? prevBit : data[i+1];
+        for(var j = 0; j+i < data.length;j++)
+        {
+          currentBit2 = data[i+j];
+          if(currentBit2 !== '.')break;
+          switch(prevRenderBit)
+          {
+            case '0':
+            {
+              solid0(ctx, posX, posY, dx, dy);
+              break
+            }
+
+            case '1':
+            {
+              solid1(ctx, posX, posY, dx, dy);
+              break;
+            }
+            default:
+            {
+              
+            }
+          }
+          posX += dx;
+        }
+        i = i + j-1;
+        posX -= dx;
       }
       posX += dx;
     }
-}
-
-
-class Signal
-{
-    constructor(index){
-        this.index = index;
-        this.data = '';
-        this.text = [];
-        this.name = 'Signal ' + index;
-        this.lineWidth = 1;
-    }
-
-    //Update signal data
-    toggleSignal(x)
-    {
-      var splitData = this.data.split('');
-      if(splitData[x] === '0') splitData[x] = '1';
-      else if (splitData[x] === '1') splitData[x] = '0';
-      this.data = splitData.join('');
-    }
-
-    //replace signal bit
-    replaceSignal(x, bit)
-    {
-      if(!bit)return;
-      var splitData = this.data.split('');
-      splitData[x] = bit;
-      this.data = splitData.join('');
-    }
-
-}
+  }
 
 
 //Basic coordinate class
@@ -210,6 +383,7 @@ function line(ctx, from, to) {
     ctx.moveTo(from.x, from.y);
     ctx.lineTo(to.x, to.y);
     ctx.stroke();
+    ctx.closePath();
 }
 
 //solid 0
@@ -228,11 +402,41 @@ function solid1(ctx, x, y, dx, dy)
     line(ctx, p1, p2);
 }
 
+//glitch0
+function glitch0(ctx, x, y, dx, dy)
+{
+    var dx1 = dx/div;
+    var p1 = new Coordinate(x, y);
+    var p2 = p1.right(dx);
+    var p3 = p1.right(dx1);
+    var p4 = p3.right(dx1).down(dx1*2);
+    var p5 = p3.right(dx1*2);
+    line(ctx, p1, p3);
+    line(ctx, p3, p4);
+    line(ctx, p4, p5);
+    line(ctx, p5, p2);
+}
+
+//glitch1
+function glitch1(ctx, x, y, dx, dy)
+{
+    var dx1 = dx/div;
+    var p1 = new Coordinate(x, y);
+    p1 = p1.down(dy);
+    var p2 = p1.right(dx);
+    var p3 = p1.right(dx1);
+    var p4 = (p3.right(dx1)).up(dx1*2);
+    var p5 = (p3.right(dx1*2));
+    line(ctx, p1, p3);
+    line(ctx, p3, p4);
+    line(ctx, p4, p5);
+    line(ctx, p5, p2);
+}
 
 // Draws rising edge at (x,y)
 function risingEdge(ctx, x, y, dx, dy)
 {
-    var dx1 = dx/8;
+    var dx1 = dx/div;
     var p1 = new Coordinate(x, y);
     var p2 = p1.right(dx1);
     var p3 = p2.right(dx1).down(dy);
@@ -246,7 +450,7 @@ function risingEdge(ctx, x, y, dx, dy)
 // Draws falling edge at (x,y)
 function fallingEdge(ctx, x, y, dx, dy)
 {   
-    var dx1 = dx/8;
+    var dx1 = dx/div;
     var p1 = new Coordinate(x, y-dy);
     var p2 = p1.right(dx1);
     var p3 = p2.right(dx1).up(dy);
@@ -257,18 +461,22 @@ function fallingEdge(ctx, x, y, dx, dy)
     line(ctx, p3, p4);
 }
 
-// Draws __/# at (x,y)
-function fanoutUp(ctx, x, y, dx, dy)
-{
-    var p1 = new Coordinate(x, y);
-    risingEdge(ctx, x, y);
-    line(ctx, p1, p1.right(dx));
-}
-
-// Draws --\# at (x, y)
-function fanoutDown(ctx, x, y, dx, dy)
-{
+// Draws multibit signal cap
+function dataCap(ctx, x, y, dx, dy, type)
+{   
+  var dx1 = dx/div;
+  //data to data
+  if(type === 0)
+  {
     var p1 = new Coordinate(x, y-dy);
-    fallingEdge(ctx, x, y);
-    line(ctx, p1, p1.right(dx));
+    var p2 = p1.right(dx1);
+    var p3 = p2.right(dx1/2).down(dy/2);
+    var p4 = p2.down(dy);
+    var p5 = p1.down(dy);
+    line(ctx, p1, p2);
+    line(ctx, p2, p3);
+    line(ctx, p3, p4);
+    line(ctx, p4, p5);
+  }
+
 }

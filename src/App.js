@@ -1,7 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
 import './comp/button';
-import Button from './comp/button';
 import Grid from './core/grid';
 import { useState } from 'react';
 import Slider from './comp/slider';
@@ -22,6 +21,15 @@ function App() {
     bgColor: "#000000",
     gridColor: "#FFFFFF"
   });
+
+  const sampleSignal = {
+    signal: [
+      { name: "clk", wave: "p.....|..." },
+      { name: "data", wave: "x.345x|=.x" },
+      { name: "req", wave: "0.1..0|1.0" },
+      { name: "ack", wave: "1.....|01." }
+  ]
+};
   
   //tab data
   const[tabs, setTabs] = useState([{name : "tab 0", signals : [], renderSequence : []}]);
@@ -50,7 +58,7 @@ function App() {
   //................................ EVENT HANDLERS............................................
   //Adds new signal
   const handlerAddbutton = () => {
-    var randomSignal = (1024 * Math.sin(Math.random()) >>> 0).toString(2);
+    var randomSignal = '0.';
     //console.log(randomSignal);
     const newItem = {name : 'Signal_' + signals.length , data : randomSignal, width : 1}
     SetSignals(prev => [...prev, newItem]);
@@ -168,7 +176,7 @@ function App() {
               let prevData = signal.data;
               let sig = signal.data.split('');
               //sig = sig + sig[sig.length-1].reapeat(x - sig.length);
-              return {name : signal.name, data : prevData + sig[0].repeat(x-sig.length+1), width : signal.width};
+              return {name : signal.name, data : prevData + '.'.repeat(x-sig.length+1), width : signal.width};
             }
 
             //else toggle signal
@@ -178,7 +186,7 @@ function App() {
               const minx = Math.min(x ,x1);
               const maxX = Math.max(x, x1);
               for(var j = minx; j <= maxX;j++){
-                chars[j] = copyBit;
+                chars[j] = '.';
               }
               return {name : signal.name, data : chars.join(''), width : signal.width};
             }
@@ -203,7 +211,7 @@ function App() {
               let prevData = signal.data;
               let sig = signal.data.split('');
               //sig = sig + sig[sig.length-1].reapeat(x - sig.length);
-              return {name : signal.name, data : prevData + sig[0].repeat(x-sig.length+1), width : signal.width};
+              return {name : signal.name, data : prevData + '.'.repeat(x-sig.length+1), width : signal.width};
             }
 
             //else toggle signal
@@ -263,6 +271,9 @@ function App() {
         <div id="banner">
           <img src={logo} className="App-logo" alt="logo" />
           <h1>WaveReact</h1>
+          <svg width = "100" height="200">
+            <circle cx="50" cy="50" r="5" stroke="red" fill="black"  strokeWidth="2"  />
+          </svg>
         </div>
         {/* The OUTPUT of the app. Signal and it's names */}
         <div id="output-panel">
@@ -275,7 +286,6 @@ function App() {
             <Grid dx={canvasConfig.dx} dy={canvasConfig.dy} mouse={mousePos} prevMouse={prevMousePos} dragging={isDragging} offsetY={canvasConfig.offsetY}timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount} />
             <SignalWindow signals={signals} renderSequence={renderSequence} selectionIndex={selectionIndex} dx={canvasConfig.dx} dy={canvasConfig.dy} offsetY={canvasConfig.offsetY} timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount} onDown={handlerMouseDownMain} onMove={(e) => {handlerMouseMoveMain(e)}} onUp={(e) => {handlerMouseUpMain(e)}}/>
           </div>
-
         </div>
         
         {/* Tab panel */}

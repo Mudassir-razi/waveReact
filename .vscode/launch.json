@@ -11,7 +11,7 @@
             "request": "launch",
             "name": "Launch React App in Edge",
             "url": "http://localhost:3000",
-            "webRoot": "${workspaceFolder}",
+            "webRoot": "${workspaceFolder}/src",
             "trace" : true
         }
     ]
