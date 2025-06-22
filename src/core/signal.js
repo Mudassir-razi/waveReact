@@ -1,48 +1,14 @@
 
 import { useEffect, useRef } from "react";
 const div = 8;
+//coordinate lookup table
+
+
+
 //returns the main layer of the canvas, with all the signals rendered onto it
 export default function SignalWindow({signals, renderSequence, dx, dy, offsetY, timeStamp, signalCount, onDown, onMove, onUp})
 {
   const signalWindowRef = useRef(null);
-
-  //handles mouse events, returns mouse click position index
-  useEffect(()=>{
-    const mainCanvas = signalWindowRef.current;
-
-    function handleMouseDown(event) {
-      const rect = mainCanvas.getBoundingClientRect();
-      const x = Math.floor((event.clientX - rect.left) / dx);
-      const y = Math.floor((event.clientY - rect.top) / (dy + offsetY));
-      onDown({x, y});
-    }
-  
-    function handleMouseMove(event)
-    {
-      const rect = mainCanvas.getBoundingClientRect();
-      const x = Math.floor((event.clientX - rect.left) / dx);
-      const y = Math.floor((event.clientY - rect.top) / (dy + offsetY));
-      onMove({x, y});
-    }
-
-    function handleMouseUp(event)
-    {
-      const rect = mainCanvas.getBoundingClientRect();
-      const x = Math.floor((event.clientX - rect.left) / dx);
-      const y = Math.floor((event.clientY - rect.top) / (dy + offsetY));
-      onUp({x, y})
-    }
-
-    mainCanvas.addEventListener("mousedown", handleMouseDown);
-    mainCanvas.addEventListener("mousemove", handleMouseMove);
-    mainCanvas.addEventListener("mouseup", handleMouseUp);
-  
-    return () => {
-      mainCanvas.removeEventListener("mousedown", handleMouseDown);
-      mainCanvas.removeEventListener("mousemove", handleMouseMove);
-      mainCanvas.removeEventListener("mouseup", handleMouseUp);
-    };
-    }, [onDown, onMove, onUp, dx, dy, signalCount, offsetY]);
 
   //Renders the signals on the canvas  
   useEffect(()=>{
@@ -52,431 +18,259 @@ export default function SignalWindow({signals, renderSequence, dx, dy, offsetY, 
 
 
   return(
-    <canvas ref={signalWindowRef} id="mainLayer" width={timeStamp * dx} height={signalCount * (dy + offsetY)}/>
+      <svg 
+      ref={signalWindowRef} 
+      id="mainLayer" 
+      width={timeStamp * dx} 
+      height={signalCount * (dy + offsetY) + 5} 
+      style={{ position: "absolute", top: 0, left: 0, zIndex: 2, backgroundColor: "transparent" }}
+      onMouseDown={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = Math.floor((e.clientX - rect.left) / dx);
+        const y = Math.floor((e.clientY - rect.top) / (dy+offsetY));
+        onDown({ x, y }); 
+      }}
+      onMouseMove={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = Math.floor((e.clientX - rect.left) / dx);
+        const y = Math.floor((e.clientY - rect.top) / (dy+offsetY));
+        console.log("Move");
+        onMove({ x, y });
+      }}
+      onMouseUp={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = Math.floor((e.clientX - rect.left) / dx);
+        const y = Math.floor((e.clientY - rect.top) / (dy+offsetY));
+        onUp({ x, y });
+      }}
+    >
+    </svg>
   );
 }
 
 
+
+
+
 //renders all the signals on the grid
-function renderAllSignals(mainCanvas, sequence, signals, dx, dy, timeStamp, signalCount)
+function renderAllSignals(svg_canvas, sequence, signals, dx, dy, timeStamp, signalCount)
 {
     var offsetY = 8;
-    console.log("Rendering " + sequence.length + " signals with Settings: dx: " + dx + " dy: " + dy);
-    var ctx = mainCanvas.getContext("2d");
-    ctx.clearRect(0, 0, dx * timeStamp, (dy + offsetY)* signalCount);
-    ctx.strokeStyle = "#ffffff";
+    svg_canvas.innerHTML = ''; // Clear previous content
+    //console.log("Rendering " + sequence.length + " signals with Settings: dx: " + dx + " dy: " + dy);
     for(var i = 0; i < sequence.length; i++){
-        var signal = signals[sequence[i]].data;
-        renderSignal(ctx, signal, i, parseInt(dx), parseInt(dy), offsetY, signals[i].width);
+        var signal = signals[sequence[i]].wave;
+        var data = signals[sequence[i]].data;
+        renderSignal(svg_canvas, signal, data, i, parseInt(dx), parseInt(dy), offsetY, signals[i].width);
     }
 }
 
-function renderSignal(ctx, data, idx, dx, dy, offsetY, lineWidth)
+function renderSignal(ctx, wave, data, idx, dx, dy, offsetY, lineWidth)
 {
-    var posX = 0;
-    var posY = (idx + 1)* (dy + offsetY);
-    var prevRenderBit=data[0];
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = lineWidth;
-    for(var i = 0; i < data.length;i++){
-      //console.log(i);
-      var currentBit = data[i];
-      var prevBit = i === 0 ? data[i] : data[i-1];
+  var points = '';
+  var shapes = '';
+  var texts =  [];
 
-      if(currentBit === '0')
-      {
-        switch(prevBit)
-        {
-          case '0':
-          {
-            glitch0(ctx, posX, posY, dx, dy);
-            break
-          }
+  var last = wave[0] === '1' ? '0' : '1';
+  var dataIndex = 0;
 
-          case '1':
-          {
-            fallingEdge(ctx, posX, posY, dx, dy);
-            break;
-          }
-
-          case '=':
-          {
-            fallingEdge(ctx, posX, posY, dx, dy);
-            break;
-          }
-
-          case '.':
-          {
-            //conditional edge
-            if(prevRenderBit === '1')fallingEdge(ctx, posX, posY, dx, dy);
-            
-            else if(prevRenderBit === '0')glitch0(ctx, posX, posY, dx, dy);
-            
-            else if(prevRenderBit === '=')
-            {
-              fallingEdge(ctx, posX, posY, dx, dy);
-              solid0(ctx, posX, posY, dx, dy);
-            }
-            break;
-          }
-          default:
-          {
-            
-          } 
-        }
-      }
-      else if(currentBit === '1')
-      {
-        switch(prevBit)
-        {
-          case '0':
-          {
-            risingEdge(ctx, posX, posY, dx, dy);
-            break
-          }
-
-          case '1':
-          {
-            glitch1(ctx, posX, posY, dx, dy);
-            break;
-          }
-
-          case '=':
-          {
-            risingEdge(ctx, posX, posY, dx, dy);
-            break;
-          }
-
-          case '.':
-          {
-            //conditional edge
-            //conditional edge
-            if(prevRenderBit === '1')glitch0(ctx, posX, posY, dx, dy);
-            
-            else if(prevRenderBit === '0')risingEdge(ctx, posX, posY, dx, dy);
-            
-            else if(prevRenderBit === '=')
-            {
-              risingEdge(ctx, posX, posY, dx, dy);
-              solid1(ctx, posX, posY, dx, dy);
-            }
-            break;
-          }
-          default:
-          {
-            
-          } 
-        }
-      }
-
-      else if(currentBit === '=')
-      {
-        const dx1 = dx/div;
-        var nextBit = i+1 < data.length ? data[i+1] : '|';
-        var rep = 0;
-        for(var k = 1;k+i < data.length;k++)
-        {
-          if(data[i+k] === '.')
-          {
-            prevRenderBit = '=';
-            nextBit = k+i+1 < data.length ? data[k+i+1] : '|';
-            rep++;
-          }
-          else 
-          {
-            break;
-          }
-        }
-        console.log(nextBit);
-        ctx.beginPath();
-        ctx.moveTo(posX, posY);
-        
-        //Zero case
-        if(prevBit === '0' || (prevBit === '.' && prevRenderBit === '0'))
-        {
-          ctx.lineTo(posX + dx1, posY);
-          ctx.lineTo(posX + 2*dx1, posY - dy);
-          ctx.lineTo(posX + (1+rep)*dx + dx1, posY - dy);
-          if(nextBit === '0')
-          {
-            ctx.lineTo(posX + (1+rep)*dx + 2*dx1, posY);
-            ctx.lineTo(posX+dx1, posY);
-          }
-          else if(nextBit === '1')
-          {
-            ctx.lineTo(posX + (1+rep)*dx + 2*dx1, posY-dy);
-            ctx.lineTo(posX + (1+rep)*dx + dx1, posY);
-            ctx.lineTo(posX+dx1, posY);
-          }
-          else if(nextBit === '=')
-          {
-            ctx.lineTo(posX + (1+rep)*dx + dx1 + dx1/2, posY-dy/2);
-            ctx.lineTo(posX + (1+rep)*dx + dx1 , posY);
-            ctx.lineTo(posX+dx1, posY);
-          }
-
-          else if(nextBit === '|')
-          {
-            ctx.lineTo(posX + (1+rep)*dx + dx1, posY);
-            ctx.lineTo(posX + dx1, posY);
-            ctx.lineTo(posX+dx1, posY);
-          }
-          ctx.fill();
-          ctx.stroke();
-          ctx.closePath();
-        }
-
-        //one case
-        else if(prevBit === '1' || (prevBit === '.' && prevRenderBit === '1'))
-        {
-          ctx.moveTo(posX, posY-dy);
-          ctx.lineTo(posX + dx1, posY-dy);
-          ctx.lineTo(posX + 2*dx1, posY);
-          ctx.lineTo(posX + (1+rep)*dx + dx1, posY);
-          if(nextBit === '0')
-          {
-            ctx.lineTo(posX + (1+rep)*dx + 2*dx1, posY);
-            ctx.lineTo(posX + (1+rep)*dx + dx1, posY-dy);
-            ctx.lineTo(posX+dx1, posY-dy);
-          }
-          else if(nextBit === '1')
-          {
-            ctx.lineTo(posX + (1+rep)*dx + 2*dx1, posY-dy);
-            ctx.lineTo(posX+dx1, posY-dy);
-          }
-          else if(nextBit === '=')
-          {
-            ctx.lineTo(posX + (1+rep)*dx + dx1 + dx1/2, posY-dy/2);
-            ctx.lineTo(posX + (1+rep)*dx + dx1 , posY-dy);
-            ctx.lineTo(posX+dx1, posY-dy);
-          }
-          else if(nextBit === '|')
-          {
-            ctx.lineTo(posX + (1+rep)*dx + dx1, posY-dy);
-            ctx.lineTo(posX + dx1, posY-dy);
-            ctx.lineTo(posX+dx1, posY-dy);
-          }
-          ctx.fill();
-          ctx.stroke();
-          ctx.closePath();
-        }
-
-        //multibit case
-        else if(prevBit === '=' || (prevBit === '.' && prevRenderBit === '='))
-        {
-          ctx.moveTo(posX+dx1 + dx1/2, posY-dy/2);
-          ctx.lineTo(posX + 2*dx1, posY);
-          ctx.lineTo(posX + (1+rep)*dx + dx1, posY);
-          if(nextBit === '0')
-          {
-            ctx.lineTo(posX + (1+rep)*dx + 2*dx1, posY);
-            ctx.lineTo(posX + (1+rep)*dx + dx1, posY-dy);
-            ctx.lineTo(posX+2*dx1, posY-dy);
-            ctx.lineTo(posX+dx1+dx1/2, posY-dy/2);
-          }
-          else if(nextBit === '1')
-          {
-            ctx.lineTo(posX + (1+rep)*dx + 2*dx1, posY-dy);
-            ctx.lineTo(posX+2*dx1, posY-dy);
-            ctx.lineTo(posX+dx1+dx1/2, posY-dy/2);
-          }
-          else if(nextBit === '=')
-          {
-            ctx.lineTo(posX + (1+rep)*dx + dx1 + dx1/2, posY-dy/2);
-            ctx.lineTo(posX + (1+rep)*dx + dx1 , posY-dy);
-            ctx.lineTo(posX+2*dx1, posY-dy);
-            ctx.lineTo(posX+dx1+dx1/2, posY-dy/2);
-          }
-           else if(nextBit === '|')
-          {
-            ctx.lineTo(posX + (1+rep)*dx + dx1, posY-dy);
-            ctx.lineTo(posX+2*dx1, posY-dy);
-            ctx.lineTo(posX+dx1+dx1/2, posY-dy/2);
-          }
-
-          ctx.fill();
-          ctx.stroke();
-          ctx.closePath();
-        }
-        i = i + rep;
-        posX += dx*rep;
-      }
-      else if (currentBit === '.')
-      {
-        prevRenderBit = prevBit;
-        var currentBit2 = currentBit;
-        //var nextBit = i >= data.length ? prevBit : data[i+1];
-        for(var j = 0; j+i < data.length;j++)
-        {
-          currentBit2 = data[i+j];
-          if(currentBit2 !== '.')break;
-          switch(prevRenderBit)
-          {
-            case '0':
-            {
-              solid0(ctx, posX, posY, dx, dy);
-              break
-            }
-
-            case '1':
-            {
-              solid1(ctx, posX, posY, dx, dy);
-              break;
-            }
-            default:
-            {
-              
-            }
-          }
-          posX += dx;
-        }
-        i = i + j-1;
-        posX -= dx;
-      }
-      posX += dx;
-    }
-  }
-
-
-//Basic coordinate class
-class Coordinate {
-    constructor(x = 0, y = 0) {
-      this.x = x;
-      this.y = y;
-    }
-  
-    up(step = 1) {
-      return new Coordinate(this.x, this.y + step);
-    }
-  
-    down(step = 1) {
-      return new Coordinate(this.x, this.y - step);
-    }
-  
-    right(step = 1) {
-      return new Coordinate(this.x + step, this.y);
-    }
-  
-    left(step = 1) {
-      return new Coordinate(this.x - step, this.y);
-    }
-  
-    toString() {
-      return `(${this.x}, ${this.y})`;
-    }
-  
-    distanceTo(other) {
-      const dx = this.x - other.x;
-      const dy = this.y - other.y;
-      return Math.sqrt(dx * dx + dy * dy);
-    }
-  
-    equals(other) {
-      return this.x === other.x && this.y === other.y;
-    }
-  }
-  
-  
-//Draws line between from and to coordinates. 
-function line(ctx, from, to) {
-    ctx.beginPath();
-    ctx.moveTo(from.x, from.y);
-    ctx.lineTo(to.x, to.y);
-    ctx.stroke();
-    ctx.closePath();
-}
-
-//solid 0
-function solid0(ctx, x, y, dx, dy)
-{
-    var p1 = new Coordinate(x, y);
-    var p2 = p1.right(dx);
-    line(ctx, p1, p2);
-}
-//solid 1
-function solid1(ctx, x, y, dx, dy)
-{
-    var p1 = new Coordinate(x, y);
-    p1     = p1.down(dy);
-    var p2 = p1.right(dx);
-    line(ctx, p1, p2);
-}
-
-//glitch0
-function glitch0(ctx, x, y, dx, dy)
-{
-    var dx1 = dx/div;
-    var p1 = new Coordinate(x, y);
-    var p2 = p1.right(dx);
-    var p3 = p1.right(dx1);
-    var p4 = p3.right(dx1).down(dx1*2);
-    var p5 = p3.right(dx1*2);
-    line(ctx, p1, p3);
-    line(ctx, p3, p4);
-    line(ctx, p4, p5);
-    line(ctx, p5, p2);
-}
-
-//glitch1
-function glitch1(ctx, x, y, dx, dy)
-{
-    var dx1 = dx/div;
-    var p1 = new Coordinate(x, y);
-    p1 = p1.down(dy);
-    var p2 = p1.right(dx);
-    var p3 = p1.right(dx1);
-    var p4 = (p3.right(dx1)).up(dx1*2);
-    var p5 = (p3.right(dx1*2));
-    line(ctx, p1, p3);
-    line(ctx, p3, p4);
-    line(ctx, p4, p5);
-    line(ctx, p5, p2);
-}
-
-// Draws rising edge at (x,y)
-function risingEdge(ctx, x, y, dx, dy)
-{
-    var dx1 = dx/div;
-    var p1 = new Coordinate(x, y);
-    var p2 = p1.right(dx1);
-    var p3 = p2.right(dx1).down(dy);
-    var p4 = p3.right(dx-2*dx1);
-
-    line(ctx, p1, p2);
-    line(ctx, p2, p3);
-    line(ctx, p3, p4);
-}
-
-// Draws falling edge at (x,y)
-function fallingEdge(ctx, x, y, dx, dy)
-{   
-    var dx1 = dx/div;
-    var p1 = new Coordinate(x, y-dy);
-    var p2 = p1.right(dx1);
-    var p3 = p2.right(dx1).up(dy);
-    var p4 = p3.right(dx-2*dx1);
-
-    line(ctx, p1, p2);
-    line(ctx, p2, p3);
-    line(ctx, p3, p4);
-}
-
-// Draws multibit signal cap
-function dataCap(ctx, x, y, dx, dy, type)
-{   
-  var dx1 = dx/div;
-  //data to data
-  if(type === 0)
+  const LUT = GetLUT(dx, dy, div, offsetY);
+  for(var i = 0;i < wave.length; i++)
   {
-    var p1 = new Coordinate(x, y-dy);
-    var p2 = p1.right(dx1);
-    var p3 = p2.right(dx1/2).down(dy/2);
-    var p4 = p2.down(dy);
-    var p5 = p1.down(dy);
-    line(ctx, p1, p2);
-    line(ctx, p2, p3);
-    line(ctx, p3, p4);
-    line(ctx, p4, p5);
+    var current = wave[i];
+    var prev = i > 0 ? wave[i-1] : '.';
+
+    if(current === '1')
+    {
+      var compare = prev === '.' ? last : prev;
+      if(compare === '0')points += getWave('pos', i * dx, idx * (dy+offsetY), LUT);
+      else if(compare === '1') points += getWave('1g', i * dx, idx * (dy+offsetY), LUT);
+      else if(compare === '=')
+      {
+        shapes += getWave('bus1', i * dx, idx * (dy+offsetY), LUT);
+        points += getWave('Lbus1', i * dx, idx * (dy+offsetY), LUT);
+      } 
+      last = '1';
+    }
+    
+    else if (current === '0')
+    {
+      compare = prev === '.' ? last : prev;
+      if(compare === '1')points += getWave('neg', i * dx, idx * (dy+offsetY), LUT);
+      else if(compare === '0') points += getWave('0g', i * dx, idx * (dy+offsetY), LUT);
+      else if(compare === '=') 
+      {
+        shapes += getWave('bus0', i * dx, idx * (dy+offsetY), LUT);
+        points += getWave('Lbus0', i * dx, idx * (dy+offsetY), LUT);
+      }
+        last = '0';
+    }
+    else if (current === '=')
+    {
+      compare = prev === '.' ? last : prev;
+      if(compare === '1')
+      {
+        shapes += getWave('1bus', i * dx, idx * (dy+offsetY), LUT);
+        points += getWave('L1bus', i * dx, idx * (dy+offsetY), LUT);
+      }
+      else if(compare === '0')
+      { 
+        shapes += getWave('0bus', i * dx, idx * (dy+offsetY), LUT);
+        points += getWave('L0bus', i * dx, idx * (dy+offsetY), LUT);
+      }
+      else if(compare === '=')
+      {
+         shapes += getWave('bust', i * dx, idx * (dy+offsetY), LUT);
+         points += getWave('Lbust', i * dx, idx * (dy+offsetY), LUT);
+      }
+
+      //add text
+      if(data !== null){
+        const t1 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+        t1.setAttribute("x", i*dx+ dx*0.70);
+        t1.setAttribute("y", idx * (dy+offsetY) + dy);
+        t1.textContent = `${dataIndex < data.split(' ').length ? data.split(' ')[dataIndex] : ' '}`;
+        texts.push(t1);
+        dataIndex++;
+      }
+      last = '=';
+    }
+    else if (current === '.')
+    {
+      if(last === '1')
+      {
+        points += getWave('1', i * dx, idx * (dy+offsetY), LUT);
+      }
+      else if(last === '0')
+      { 
+        points += getWave('0', i * dx, idx * (dy+offsetY), LUT);
+      }
+      else if(last === '=')
+      {
+        shapes += getWave('bus', i * dx, idx * (dy+offsetY), LUT);
+        points += getWave('Lbus', i * dx, idx * (dy+offsetY), LUT);
+      }
+    }
   }
 
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  text.setAttribute("x", 0);
+  text.setAttribute("y", 0);
+  text.setAttribute("fill", "black");
+  text.setAttribute("font-size", "15");
+  text.setAttribute("text-anchor", "middle");
+  text.setAttribute("pointer-events", "none");
+  text.setAttribute("class", "dynamic-text");
+  texts.forEach(tspan => {
+    text.appendChild(tspan);
+  });  
+
+  path.setAttribute("d", points);
+  path.setAttribute("stroke", "black");
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke-width", lineWidth);
+  path2.setAttribute("d", shapes);
+  path2.setAttribute("stroke", "none");
+  path2.setAttribute("fill", "skyblue");
+  ctx.appendChild(path2);
+  ctx.appendChild(path);
+  ctx.appendChild(text);
+}
+
+function getWave(segment, offsetX, offsetY, LUT)
+{
+  if(segment === 'pos')
+  {
+    return `M${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${offsetX+LUT[1].x} ${offsetY+LUT[1].y} L${offsetX+LUT[7].x} ${offsetY+LUT[7].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y}`;
+  }
+  else if(segment === 'neg')
+  {
+    return `M${offsetX+LUT[5].x} ${offsetY+LUT[5].y} L${offsetX+LUT[6].x} ${offsetY+LUT[6].y} L${offsetX+LUT[2].x} ${offsetY+LUT[2].y} L${offsetX+LUT[3].x} ${offsetY+LUT[3].y}`;
+  }
+  else if(segment === '0')
+  {
+    return `M${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${offsetX+LUT[3].x} ${offsetY+LUT[3].y}`;
+  }
+  else if(segment === '1')
+  {
+    return `M${offsetX+LUT[5].x} ${offsetY+LUT[5].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y}`;
+  }
+
+  //bus shapes
+  else if(segment === 'bus')
+  {
+    return `M${offsetX+LUT[5].x} ${offsetY+LUT[5].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y} L${offsetX+LUT[3].x} ${offsetY+LUT[3].y} L${offsetX+LUT[0].x} ${offsetY+LUT[0].y} z`;
+  }
+  else if(segment === '0bus')
+  {
+    return `M${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${offsetX+LUT[1].x} ${offsetY+LUT[1].y} L${offsetX+LUT[7].x} ${offsetY+LUT[7].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y}  L${offsetX+LUT[3].x} ${offsetY+LUT[3].y} z`;
+  }
+  else if(segment === '1bus')
+  {
+     return `M${offsetX+LUT[5].x} ${offsetY+LUT[5].y} L${offsetX+LUT[6].x} ${offsetY+LUT[6].y} L${offsetX+LUT[2].x} ${offsetY+LUT[2].y} L${offsetX+LUT[3].x} ${offsetY+LUT[3].y}  L${offsetX+LUT[8].x} ${offsetY+LUT[8].y} z`;
+  }
+  else if(segment === 'bus0')
+  {
+    return `M${offsetX+LUT[5].x} ${offsetY+LUT[5].y} L${offsetX+LUT[6].x} ${offsetY+LUT[6].y} L${offsetX+LUT[2].x} ${offsetY+LUT[2].y} L${offsetX+LUT[3].x} ${offsetY+LUT[3].y} L${offsetX+LUT[0].x} ${offsetY+LUT[0].y} z`;
+  }
+  else if(segment === 'bus1')
+  {
+    return `M${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${offsetX+LUT[1].x} ${offsetY+LUT[1].y} L${offsetX+LUT[7].x} ${offsetY+LUT[7].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y} L${offsetX+LUT[5].x} ${offsetY+LUT[5].y} z`;
+  }
+  else if(segment === 'bust')
+  {
+    return `M${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${offsetX+LUT[1].x} ${offsetY+LUT[1].y} L${offsetX+LUT[4].x} ${offsetY+LUT[4].y} L${offsetX+LUT[6].x} ${offsetY+LUT[6].y} L${offsetX+LUT[5].x} ${offsetY+LUT[5].y} z M${offsetX+LUT[3].x} ${offsetY+LUT[3].y} L${offsetX+LUT[2].x} ${offsetY+LUT[2].y} L${offsetX+LUT[4].x} ${offsetY+LUT[4].y} L${offsetX+LUT[7].x} ${offsetY+LUT[7].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y} z`;
+  }
+
+  //bus shape ends
+
+  //bus lines
+  else if(segment === 'Lbus')
+  {
+    return `M${offsetX+LUT[5].x} ${offsetY+LUT[5].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y} M${offsetX+LUT[3].x} ${offsetY+LUT[3].y} L${offsetX+LUT[0].x} ${offsetY+LUT[0].y} `;
+  }
+  else if(segment === 'L0bus')
+  {
+    return `M${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${offsetX+LUT[1].x} ${offsetY+LUT[1].y} L${offsetX+LUT[7].x} ${offsetY+LUT[7].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y}  M${offsetX+LUT[3].x} ${offsetY+LUT[3].y} L${offsetX+LUT[1].x} ${offsetY+LUT[1].y}`;
+  }
+  else if(segment === 'L1bus')
+  {
+     return `M${offsetX+LUT[5].x} ${offsetY+LUT[5].y} L${offsetX+LUT[6].x} ${offsetY+LUT[6].y} L${offsetX+LUT[2].x} ${offsetY+LUT[2].y} L${offsetX+LUT[3].x} ${offsetY+LUT[3].y}  M${offsetX+LUT[8].x} ${offsetY+LUT[8].y} L${offsetX+LUT[6].x} ${offsetY+LUT[6].y}`;
+  }
+  else if(segment === 'Lbus0')
+  {
+    return `M${offsetX+LUT[5].x} ${offsetY+LUT[5].y} L${offsetX+LUT[6].x} ${offsetY+LUT[6].y} L${offsetX+LUT[2].x} ${offsetY+LUT[2].y} L${offsetX+LUT[3].x} ${offsetY+LUT[3].y} M${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${offsetX+LUT[2].x} ${offsetY+LUT[2].y}`;
+  }
+  else if(segment === 'Lbus1')
+  {
+    return `M${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${offsetX+LUT[1].x} ${offsetY+LUT[1].y} L${offsetX+LUT[7].x} ${offsetY+LUT[7].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y} M${offsetX+LUT[5].x} ${offsetY+LUT[5].y} L${offsetX+LUT[7].x} ${offsetY+LUT[7].y}`;
+  }
+  else if(segment === 'Lbust')
+  {
+    return `M${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${offsetX+LUT[1].x} ${offsetY+LUT[1].y} L${offsetX+LUT[7].x} ${offsetY+LUT[7].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y} M${offsetX+LUT[5].x} ${offsetY+LUT[5].y} L${offsetX+LUT[6].x} ${offsetY+LUT[6].y} L${offsetX+LUT[2].x} ${offsetY+LUT[2].y} L${offsetX+LUT[3].x} ${offsetY+LUT[3].y}`;
+  }
+
+  //bus shape ends
+  else if(segment === '0g')
+  {
+    return `M${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${offsetX+LUT[1].x} ${offsetY+LUT[1].y} L${offsetX+LUT[4].x} ${offsetY+LUT[4].y} L${offsetX+LUT[2].x} ${offsetY+LUT[2].y} L${offsetX+LUT[3].x} ${offsetY+LUT[3].y} `;
+  }
+  else if(segment === '1g')
+  {
+    return `M${offsetX+LUT[5].x} ${offsetY+LUT[5].y} L${offsetX+LUT[6].x} ${offsetY+LUT[6].y} L${offsetX+LUT[4].x} ${offsetY+LUT[4].y} L${offsetX+LUT[7].x} ${offsetY+LUT[7].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y}`;
+  }
+}
+
+function GetLUT(dx, dy, div, offsetY)
+{
+  var dx1 = dx/div;
+  var dx2 = dx/div;
+  var dx3 = dx - (dx1 + dx2);
+  var bo = offsetY;
+  var lut = [{x:0, y:bo+dy}, {x:dx1, y:bo+dy}, {x:dx1+dx2, y:bo+dy}, {x:dx1+dx2+dx3, y:bo+dy}, {x:dx1+dx2/2, y:bo+dy/2},
+  {x:0, y:bo}, {x:dx1, y:bo}, {x:dx1+dx2, y:bo}, {x:dx1+dx2+dx3, y:bo}];
+
+  return lut;
 }

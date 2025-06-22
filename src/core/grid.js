@@ -4,48 +4,66 @@ import { useEffect, useRef } from "react";
 
 export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetY, timeStamp, signalCount}){
 
-    const canvasRef = useRef(null);
+    const BGcanvasRef = useRef(null);
     
     useEffect(() => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext("2d");
-        const width = timeStamp * dx;
-        const height = signalCount * (dy + offsetY);
-        canvas.width = width + 2;
-        canvas.height = height;
-        ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = settings.gridColor;
-        ctx.strokeStyle = settings.gridColor;
-
-        //horizontal rect
-        // for(var i = 0; i <= signalCount; i++){
-        //     var y = i * ( dy + settings.offsetY);
-        //     ctx.beginPath();
-        //     ctx.setLineDash([5, 5])
-        //     ctx.moveTo(0, y);
-        //     ctx.lineTo(width, y);
-        //     ctx.stroke();
-        // }
-        
-        ctx.beginPath();
-        ctx.rect(0, mouse[1] * (dy + offsetY), dx * timeStamp, dy+offsetY);
-        ctx.fillStyle="rgba(255, 255, 255, 0.10)";
-        ctx.fill();
-        //vertical lines
-        for(var i = 0; i <= timeStamp; i++){
-            var x = i * dx;
-            if(!dragging)ctx.lineWidth = i === mouse[0] || i === mouse[0] + 1 ? 2 : 1;
-            else ctx.lineWidth = i === mouse[0]+1 || i === prevMouse[0] ? 3 : 1;
-            ctx.beginPath();
-            ctx.setLineDash([5, 5])
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, height);
-            ctx.stroke();
-        }
+        const svg_bg_canvas = BGcanvasRef.current;
 
     }, [dx, dy, mouse, prevMouse, dragging, timeStamp, signalCount, offsetY]);
 
+    const gridLines = Array.from({ length: timeStamp }, (_, i) => {
+        const x = i * dx;
+        return (
+        <line
+            key={i}
+            x1={x}
+            y1={0}
+            x2={x}
+            y2={signalCount * (dy + offsetY)}
+            stroke="gray"
+            strokeWidth={1}
+            strokeDasharray="4 4"
+            pointerEvents="none"
+        />
+        );
+    });
+
     return(
-        <canvas ref={canvasRef} id="bgLayer" width={timeStamp * dx} height={signalCount * (dy + offsetY)} style={{backgroundColor: settings.bgColor}}></canvas>
+        <svg
+        ref={BGcanvasRef}
+        width={timeStamp * dx} 
+        height={signalCount * (dy + offsetY) + 5}
+        style={{ position: "absolute", top: 0, left: 0, zIndex: 1 }} 
+        >
+            {gridLines}
+            <line
+                x1={dragging ? prevMouse[0] * dx : mouse[0] * dx}
+                y1={0}
+                x2={dragging ? prevMouse[0] * dx : mouse[0] * dx}
+                y2={(signalCount * (dy + offsetY) + 5)}
+                stroke={"black"}
+                strokeWidth={2}
+                pointerEvents="none" // does not block mouse events
+            />
+            <line
+                x1={(mouse[0]+1) * dx}
+                y1={0}
+                x2={(mouse[0]+1) * dx}
+                y2={(signalCount * (dy + offsetY) + 5)}
+                stroke={"black"}
+                strokeWidth={2}
+                pointerEvents="none" // does not block mouse events
+            />
+
+            <rect
+                x={0}
+                y={mouse[1] * (dy + offsetY)}
+                width={timeStamp * dx}
+                height={(dy + offsetY) + 5}
+                fill="rgba(10, 10, 10, 0.1)"
+                pointerEvents="none" // allows mouse events to pass through
+            />
+
+        </svg>
     );
 }

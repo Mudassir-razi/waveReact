@@ -21,15 +21,6 @@ function App() {
     bgColor: "#000000",
     gridColor: "#FFFFFF"
   });
-
-  const sampleSignal = {
-    signal: [
-      { name: "clk", wave: "p.....|..." },
-      { name: "data", wave: "x.345x|=.x" },
-      { name: "req", wave: "0.1..0|1.0" },
-      { name: "ack", wave: "1.....|01." }
-  ]
-};
   
   //tab data
   const[tabs, setTabs] = useState([{name : "tab 0", signals : [], renderSequence : []}]);
@@ -60,7 +51,7 @@ function App() {
   const handlerAddbutton = () => {
     var randomSignal = '0.';
     //console.log(randomSignal);
-    const newItem = {name : 'Signal_' + signals.length , data : randomSignal, width : 1}
+    const newItem = {name : 'Signal_' + signals.length , wave : randomSignal, data : '', width : 1}
     SetSignals(prev => [...prev, newItem]);
     setCanvasConfig(prev => ({...prev, signalCount : canvasConfig.signalCount + 1}));
     setRenderSequence(prev => [...prev, signals.length]);
@@ -70,7 +61,7 @@ function App() {
   {
     const updatedSignal = signals.map((signal, i) => {
       if(i === selectionIndex){
-        return {name : e.target.value, data : signal.data, width : signal.width};
+        return {name : e.target.value, wave : signal.wave, width : signal.width, data : signal.data};
       }
       else return signal;
     });
@@ -78,11 +69,22 @@ function App() {
     SetSignals(updatedSignal);
   }
 
-  const handlerSignalDataInput = (e) =>
+  const handlerWaveInput = (e) =>
   {
     const updatedSignal = signals.map((signal, i) => {
       if(i === selectionIndex){
-        return {name : signal.name, data : e.target.value, width : signal.width};
+        return {name : signal.name, wave : e.target.value, width : signal.width, data : signal.data};
+      }
+      else return signal;
+    });
+    SetSignals(updatedSignal);
+  }
+
+  const handlerDataInput = (e) =>
+  {
+    const updatedSignal = signals.map((signal, i) => {
+      if(i === selectionIndex){
+        return {name : signal.name, wave : signal.wave, width : signal.width, data : e.target.value};
       }
       else return signal;
     });
@@ -93,7 +95,7 @@ function App() {
   {
     const updatedSignal = signals.map((signal, i) => {
       if(i === selectionIndex){
-        return {name : signal.name, data : signal.data, width : e};
+        return {name : signal.name, wave : signal.wave, width : e, data:signal.data};
       }
       else return signal;
     });
@@ -134,7 +136,7 @@ function App() {
   //Handle mouse down on main canvas
   const handlerMouseDownMain = (e) =>
   {
-    console.log("mouse down");
+    console.log("mouse down at " + e.x + " " + e.y);
     //getting the first mouse click
     var newMousePos = [...prevMousePos];
     newMousePos[0] = e.x;
@@ -164,31 +166,46 @@ function App() {
       const x = e.x;
       const x1 = prevMousePos[0];
       const y = renderSequence.indexOf(prevMousePos[1]);
-      const copyBit = signals[y].data[x1];
+      const copyBit = signals[y].wave[x1];
       //update signal
       if(y < canvasConfig.signalCount){
         const updatedSignal = signals.map((signal, i) => {
           if(i === y){
             
             //strech signal
-            if(Math.max(x, x1) > signal.data.length)
+            if(Math.max(x, x1) > signal.wave.length)
             {
-              let prevData = signal.data;
-              let sig = signal.data.split('');
+              let prevwave = signal.wave;
+              let sig = signal.wave.split('');
               //sig = sig + sig[sig.length-1].reapeat(x - sig.length);
-              return {name : signal.name, data : prevData + '.'.repeat(x-sig.length+1), width : signal.width};
+              return {name : signal.name, wave : prevwave + '.'.repeat(x-sig.length+1), width : signal.width, data : signal.data};
             }
 
             //else toggle signal
             else 
             {
-              let chars = signal.data.split('');
+              let chars = signal.wave.split('');
               const minx = Math.min(x ,x1);
               const maxX = Math.max(x, x1);
-              for(var j = minx; j <= maxX;j++){
+              var lastState = 'x';
+              i = minx;
+              //get the last state
+              while(i >= 0)
+              {
+                if(chars[i] !== '.')
+                {
+                  lastState = chars[i];
+                  break;
+                }
+                i--;
+              }
+
+              for(var j = minx+1; j <= maxX;j++){
+                if(chars[j] !== '.')lastState = chars[j];
                 chars[j] = '.';
               }
-              return {name : signal.name, data : chars.join(''), width : signal.width};
+              if(maxX+1 < chars.length)chars[maxX+1] = chars[maxX+1] === lastState ? '.' : (chars[maxX+1] === '.' ? lastState : chars[maxX]) ;
+              return {name : signal.name, wave : chars.join(''), width : signal.width, data : signal.data};
             }
           }
           else return signal;
@@ -206,20 +223,81 @@ function App() {
           if(i === y){
             
             //strech signal
-            if(x > signal.data.length)
+            if(x > signal.wave.length)
             {
-              let prevData = signal.data;
-              let sig = signal.data.split('');
+              let prevwave = signal.wave;
+              let sig = signal.wave.split('');
               //sig = sig + sig[sig.length-1].reapeat(x - sig.length);
-              return {name : signal.name, data : prevData + '.'.repeat(x-sig.length+1), width : signal.width};
+              return {name : signal.name, wave : prevwave + '.'.repeat(x-sig.length+1), width : signal.width, data : signal.data};
             }
 
             //else toggle signal
-            else 
+            else
             {
-              let chars = signal.data.split('');
-              chars[x] = chars[x] === '0' ? '1' : '0';
-              return {name : signal.name, data : chars.join(''), width : signal.width};
+              let chars = signal.wave.split('');
+              var last = 'x';
+              var next = 'x';
+              var curr = chars[x];
+              i = x-1;
+              //get the last state
+              while(i >= 0)
+              {
+                if(chars[i] !== '.')
+                {
+                  last = chars[i];
+                  break;
+                }
+                i--;
+              }
+              curr = chars[x] === '.' ? last : chars[x];
+              next = x+1 < chars.length ? (chars[x+1] === '.' ? curr : chars[x+1]): 'x';
+              switch (last + curr + next)
+              {
+                case '000' : 
+                  chars[x] = '1';
+                  chars[x+1] = '0';
+                  break;
+
+                case '001' : 
+                  chars[x] = '1';
+                  chars[x+1] = '.';
+                  break;
+
+                case '010' : 
+                  chars[x] = '.';
+                  chars[x+1] = '.';
+                  break;
+
+                case '011' : 
+                  chars[x] = '.';
+                  chars[x+1] = '1';
+                  break;
+
+                case '100' : 
+                  chars[x] = '.';
+                  chars[x+1] = '0';
+                  break;
+
+                case '101' : 
+                  chars[x] = '.';
+                  chars[x+1] = '.';
+                  break;
+
+                case '110' : 
+                  chars[x] = '0';
+                  chars[x+1] = '.';
+                  break;
+
+                case '111' : 
+                  chars[x] = '0';
+                  chars[x+1] = '1';
+                  break;
+
+                default :
+                  
+                  break;
+              }
+              return {name : signal.name, wave : chars.join(''), width : signal.width, data : signal.data};
             }
           }
           else return signal;
@@ -266,7 +344,7 @@ function App() {
   return (
     /* App */
     <div className="App">
-      {/* The mani container of the app */}
+      {/* The main container of the app */}
       <div id="container">
         <div id="banner">
           <img src={logo} className="App-logo" alt="logo" />
@@ -283,8 +361,14 @@ function App() {
 
           {/* Signal renderer canvas */}
           <div id="canvas-wrapper">
-            <Grid dx={canvasConfig.dx} dy={canvasConfig.dy} mouse={mousePos} prevMouse={prevMousePos} dragging={isDragging} offsetY={canvasConfig.offsetY}timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount} />
-            <SignalWindow signals={signals} renderSequence={renderSequence} selectionIndex={selectionIndex} dx={canvasConfig.dx} dy={canvasConfig.dy} offsetY={canvasConfig.offsetY} timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount} onDown={handlerMouseDownMain} onMove={(e) => {handlerMouseMoveMain(e)}} onUp={(e) => {handlerMouseUpMain(e)}}/>
+            <Grid
+              style={{ position: "absolute", top: 0, left: 0, zIndex: 1 }} 
+              dx={canvasConfig.dx} dy={canvasConfig.dy} mouse={mousePos} prevMouse={prevMousePos} dragging={isDragging} offsetY={canvasConfig.offsetY}timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount}
+            />
+            <SignalWindow
+              style={{ position: "absolute", top: 0, left: 0, zIndex: 2 }}
+              signals={signals} renderSequence={renderSequence} selectionIndex={selectionIndex} dx={canvasConfig.dx} dy={canvasConfig.dy} offsetY={canvasConfig.offsetY} timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount} onDown={handlerMouseDownMain} onMove={(e) => {handlerMouseMoveMain(e)}} onUp={(e) => {handlerMouseUpMain(e)}}
+            />
           </div>
         </div>
         
@@ -296,7 +380,8 @@ function App() {
           <div className='control-group'>
             <h3>Modify signal</h3>
             {(selectionIndex >= 0 && signals.length > 0) && (<input className='input' type='text' value={signals[selectionIndex].name} onChange={(value) => handlerSignalNameInput(value)}></input>)}
-            {(selectionIndex >= 0 && signals.length > 0) && (<input className='input' type='text' value={signals[selectionIndex].data} onChange={(value) => handlerSignalDataInput(value)}></input>)}
+            {(selectionIndex >= 0 && signals.length > 0) && (<input className='input' type='text' value={signals[selectionIndex].wave} onChange={(value) => handlerWaveInput(value)}></input>)}
+            {(selectionIndex >= 0 && signals.length > 0) && (<input className='input' type='text' value={signals[selectionIndex].data} onChange={(value) => handlerDataInput(value)}></input>)}
             {(selectionIndex >= 0 && signals.length > 0) && (<Slider name="Width" value={signals[selectionIndex].width} min={0.1} max={5} onChange={(e) => handlerSignalWidthSlider(e)}/>)}
           </div>
           <div className="control-group">
@@ -312,3 +397,10 @@ function App() {
 
 
 export default App;
+
+
+function flip(inp)
+{
+  if(inp === '1')return '0';
+  else if( inp === '0')return '1';
+}
