@@ -361,35 +361,40 @@ function App() {
 
           {/* Signal renderer canvas */}
           <div id="canvas-wrapper">
-            <Grid
-              style={{ position: "absolute", top: 0, left: 0, zIndex: 1 }} 
-              dx={canvasConfig.dx} dy={canvasConfig.dy} mouse={mousePos} prevMouse={prevMousePos} dragging={isDragging} offsetY={canvasConfig.offsetY}timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount}
-            />
-            <SignalWindow
-              style={{ position: "absolute", top: 0, left: 0, zIndex: 2 }}
-              signals={signals} renderSequence={renderSequence} selectionIndex={selectionIndex} dx={canvasConfig.dx} dy={canvasConfig.dy} offsetY={canvasConfig.offsetY} timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount} onDown={handlerMouseDownMain} onMove={(e) => {handlerMouseMoveMain(e)}} onUp={(e) => {handlerMouseUpMain(e)}}
-            />
+            <div style={{ width: canvasConfig.timeStamp * canvasConfig.dx, height: canvasConfig.signalCount * (canvasConfig.dy + canvasConfig.offsetY) + 100, position: 'relative' }}>
+              <Grid
+                style={{ position: "absolute", top: 0, left: 0, zIndex: 1 }} 
+                dx={canvasConfig.dx} dy={canvasConfig.dy} mouse={mousePos} prevMouse={prevMousePos} dragging={isDragging} offsetY={canvasConfig.offsetY}timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount}
+              />
+              <SignalWindow
+                style={{ position: "absolute", top: 0, left: 0, zIndex: 2 }}
+                signals={signals} renderSequence={renderSequence} selectionIndex={selectionIndex} dx={canvasConfig.dx} dy={canvasConfig.dy} offsetY={canvasConfig.offsetY} timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount} onDown={handlerMouseDownMain} onMove={(e) => {handlerMouseMoveMain(e)}} onUp={(e) => {handlerMouseUpMain(e)}}
+              />
+            </div>
           </div>
         </div>
         
-        {/* Tab panel */}
-        <TabBar tabs={tabs} renderSequence={tabRenderSequence} selectionIndex={selectionTab} onKeyDown={handleKeyDown} onAddDown={handlerAddTab} onClick={handerlTabClick}/>
-
         {/* UI elements holder */}
         <div id="ui-panel">
           <div className='control-group'>
-            <h3>Modify signal</h3>
+            <h3>Signals</h3>
             {(selectionIndex >= 0 && signals.length > 0) && (<input className='input' type='text' value={signals[selectionIndex].name} onChange={(value) => handlerSignalNameInput(value)}></input>)}
             {(selectionIndex >= 0 && signals.length > 0) && (<input className='input' type='text' value={signals[selectionIndex].wave} onChange={(value) => handlerWaveInput(value)}></input>)}
             {(selectionIndex >= 0 && signals.length > 0) && (<input className='input' type='text' value={signals[selectionIndex].data} onChange={(value) => handlerDataInput(value)}></input>)}
             {(selectionIndex >= 0 && signals.length > 0) && (<Slider name="Width" value={signals[selectionIndex].width} min={0.1} max={5} onChange={(e) => handlerSignalWidthSlider(e)}/>)}
           </div>
           <div className="control-group">
-            <h3> Global controls </h3>
+            <h3>Controls</h3>
             <Slider name="Time stamp" value={canvasConfig.timeStamp} min={5} max={500} onChange={(val) => setCanvasConfig(prev => ({...prev, timeStamp : val}))}/>
             <Slider name="Time scale" value={canvasConfig.dx} min={15} max={80} onChange={(val) => setCanvasConfig(prev => ({...prev, dx : val}))}/>
           </div>
+          <div contentEditable="true" className='control-group' style={{fontFamily:"monospace"}}>
+            {(selectionIndex >= 0 && signals.length > 0) && (<pre> <span style={{ color: 'blue', fontFamily:"courier"}}>Wave</span>: {JSON.stringify(signals, null, 2)} </pre>)}
+          </div>
         </div>
+        {/* Tab panel */}
+        <TabBar tabs={tabs} renderSequence={tabRenderSequence} selectionIndex={selectionTab} onKeyDown={handleKeyDown} onAddDown={handlerAddTab} onClick={handerlTabClick}/>
+
       </div>
     </div>
   );
