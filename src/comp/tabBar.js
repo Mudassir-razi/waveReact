@@ -1,21 +1,7 @@
 import { useEffect } from "react";
 import LabelInput from "./labelInput";
 
-export default function TabBar({tabs, renderSequence, selectionIndex, onKeyDown, onClick, onAddDown}) {
-
-
-//Listens to key press
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      onKeyDown(event.key);
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown); // Cleanup
-    };
-  },);
+export default function TabBar({tabs, renderSequence, selectionIndex, onClick, onAddDown}) {
 
   return (
     <div className="tab-bar">

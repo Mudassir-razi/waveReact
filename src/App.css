@@ -64,6 +64,7 @@ html, body {
     position: relative;
     overflow-x: auto;
     overflow-y: auto;
+    user-select: none;
   }
 
 
@@ -78,14 +79,12 @@ html, body {
   #ui-panel {
     width: 100%;
     margin-top:0%;
-    margin-right:10px;
     height: 250px;
     display: flex;
     flex-direction: row;
     background-color: #dadada;
     border-left: 1px solid #ccc;
-    box-sizing: border-box;
-    padding: 16px;
+    padding: 0px;
   }
   
   #ui-panel h3 {
@@ -107,10 +106,11 @@ html, body {
   
   .signal-label{
     height: 38px;
+    width: auto;
     display: flex;
     align-items: center;
     justify-content: right;
-    color: rgb(0, 36, 199);
+    color: rgb(30, 71, 255);
     font-size: 14px;
     font-family: 'Courier New', Courier, monospace;
     font-weight: bold;
@@ -118,7 +118,6 @@ html, body {
   }
 
   .signal-label:hover {
-    background-color: #cecece;
     font-size: 13px;
   }
 
@@ -127,13 +126,12 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: right;
-    color:rgb(0, 36, 199);
+    color:rgb(167, 112, 255);
     font-size: 14px;
     font-family: 'Courier New', Courier, monospace;
     font-weight: bolder;
     padding-right: 0px;
     vertical-align:middle;
-    background-color: rgb(214, 214, 214);
   }
 
   h1{
@@ -155,15 +153,54 @@ html, body {
   }
 
   .input[type="text"] {
-    color: #000000;
+    color: #e43535;
     font-size: 0.9rem;
     background-color: rgba(0, 0, 0, .1);
-    width: 100%;
+    width: 950%;
+    height:190%;
     box-sizing: border-box;
     padding-inline: 0.5em;
     padding-block: 0.7em;
     border: none;
     border-bottom: 1px solid white;
+  }
+
+  .textarea
+  {
+    color: #000000;
+    font-size: 0.9rem;
+    background-color: rgba(0, 0, 0, .1);
+    width: 190%;
+    height:190%;
+    box-sizing: border-box;
+    padding-inline: 0.5em;
+    padding-block: 0.7em;
+    margin-bottom: 1%;
+    border: none;
+  }
+
+  .button-5
+  {
+    background-color: #2f3338;
+    display: flex;
+    border: 0px;
+    padding: 2px;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 10px;
+    width: 10%;
+    height: 26px;
+    text-align: center;
+  }
+
+  .button-5:hover {
+    box-shadow: rgba(0, 0, 0, 0.1) 3px 3px 5px;
+    background-color: #252525;
+    font-weight: bold;
+    font-size: 10px;
   }
 
   .button-6 {

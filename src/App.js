@@ -2,8 +2,7 @@ import logo from './logo.svg';
 import './App.css';
 import './comp/button';
 import Grid from './core/grid';
-import { useState } from 'react';
-import Slider from './comp/slider';
+import { useState, useEffect} from 'react';
 import SignalWindow from './core/signal';
 import SignalNameDiv from './comp/signalNameDivl';
 import TabBar from './comp/tabBar';
@@ -13,6 +12,7 @@ function App() {
   //................................STATES...................................................
   //canvas config
   const [canvasConfig, setCanvasConfig] = useState({
+    
     dx: 30,
     dy: 30,
     timeStamp: 40,
@@ -20,16 +20,21 @@ function App() {
     offsetY: 8,
     bgColor: "#000000",
     gridColor: "#FFFFFF"
+  
   });
   
   //tab data
-  const[tabs, setTabs] = useState([{name : "tab 0", signals : [], renderSequence : []}]);
+  const[tabs, setTabs] = useState([{name : "tab 0", signals : []}]);
 
   //Signal data
   const [signals, SetSignals] = useState([]);
+  //signal text for display
+  const [text, setText] = useState(signalToLine(signals));
+  const [editorText, setEditorText] = useState(signalToLine(signals));
 
-  //render sequence
-  const [renderSequence, setRenderSequence] = useState([]);
+  //Error parsing
+  const [error, setError] = useState(null);
+
   //tab render sequence
   const [tabRenderSequence, setTabRenderSequence] = useState([0]);
 
@@ -44,63 +49,90 @@ function App() {
   const[prevMousePos, setPrevMousePos] = useState([0,0]);
   const[isDragging, setIsDraggin] = useState(false);
   
+  // useEffect(() => {
+  //   setText(signalToLine(signals));
+    
+  // }, [signals]);
 
+  useEffect(()=> 
+  {
+    //Keyboard control
+    const handleKeyDown = (e) =>
+    {
+      var updatedSignal = signals;
+      //duplicate selected wave.
+      if(e.key === 'd' && document.activeElement.tagName.toLowerCase() !== 'textarea')
+      {
+        updatedSignal = signals.map((signal, i) => { 
+          if(i === selectionIndex)
+          {
+            var currentWave = signal.wave;
+            if(currentWave[0] !== currentWave[currentWave.length-1] && currentWave[currentWave.length-1] !== '.')return {name : signal.name, wave : signal.wave + signal.wave, width : signal.width, data : signal.data + ' ' + signal.data};
+            else 
+            {
+              var newWave = '';
+              var j = currentWave.length-1;
+              while(j >= 0 && currentWave[j] === '.') j--;
+              
+              if(currentWave[0] === currentWave[j]) 
+              {
+                newWave = '.' + currentWave.substring(1);
+                return {name : signal.name, wave : signal.wave + newWave, width : signal.width, data : signal.data +  ' ' + signal.data};
+              }
+              else return {name : signal.name, wave : signal.wave + currentWave, width : signal.width, data : signal.data +  ' ' + signal.data};
+            }
+          }
+          else return signal;
+        });
+        SetSignals(updatedSignal);
+        setText(signalToLine(updatedSignal));
+        setEditorText(signalToLine(updatedSignal));
+        setCanvasConfig(prev => ({...prev,timeStamp: maxTimeStamp(updatedSignal) + 10 }));
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+
+
+  }, []);
 
   //................................ EVENT HANDLERS............................................
   //Adds new signal
   const handlerAddbutton = () => {
     var randomSignal = '0.';
     //console.log(randomSignal);
-    const newItem = {name : 'Signal_' + signals.length , wave : randomSignal, data : '', width : 1}
+    const newItem = {name : 'Signal_' + signals.length , wave : randomSignal, data : '', width : 1};
+    const updatedSignal = [...signals, newItem];
+
     SetSignals(prev => [...prev, newItem]);
-    setCanvasConfig(prev => ({...prev, signalCount : canvasConfig.signalCount + 1}));
-    setRenderSequence(prev => [...prev, signals.length]);
+    setText(signalToLine(updatedSignal));
+    setEditorText(signalToLine(updatedSignal));
+    setCanvasConfig(prev => ({...prev,timeStamp: maxTimeStamp(updatedSignal) + 10, signalCount : updatedSignal.length + 1}));
   };
 
-  const handlerSignalNameInput = (e) =>
-  {
-    const updatedSignal = signals.map((signal, i) => {
-      if(i === selectionIndex){
-        return {name : e.target.value, wave : signal.wave, width : signal.width, data : signal.data};
-      }
-      else return signal;
-    });
-
-    SetSignals(updatedSignal);
+  const handleCodeFormat = () => {
+    console.log("H");
+    setEditorText(text);
   }
 
-  const handlerWaveInput = (e) =>
+  const handlerSignalCodeInput = (newText) =>
   {
-    const updatedSignal = signals.map((signal, i) => {
-      if(i === selectionIndex){
-        return {name : signal.name, wave : e.target.value, width : signal.width, data : signal.data};
-      }
-      else return signal;
-    });
-    SetSignals(updatedSignal);
-  }
+    setEditorText(newText); // Update textarea immediately
 
-  const handlerDataInput = (e) =>
-  {
-    const updatedSignal = signals.map((signal, i) => {
-      if(i === selectionIndex){
-        return {name : signal.name, wave : signal.wave, width : signal.width, data : e.target.value};
-      }
-      else return signal;
-    });
-    SetSignals(updatedSignal);
-  }
-
-  const handlerSignalWidthSlider = (e) =>
-  {
-    const updatedSignal = signals.map((signal, i) => {
-      if(i === selectionIndex){
-        return {name : signal.name, wave : signal.wave, width : e, data:signal.data};
-      }
-      else return signal;
-    });
-
-    SetSignals(updatedSignal);
+    try {
+      const jsonObj = lineToSignal(newText); // convert to JSON array
+      SetSignals(jsonObj); // Only if valid
+      setText(signalToLine(signals));
+      setCanvasConfig(prev => ({...prev,timeStamp: maxTimeStamp(jsonObj) + 10, signalCount : jsonObj.length + 1}));
+      setError(null);
+    } catch (e) {
+      console.log("Invalid format");
+      setError("Invalid format");
+    }
   }
 
   //tab switching handler
@@ -111,7 +143,7 @@ function App() {
 
     const updatedTab = tabs.map((tab, i) => {
       if(i === selectionTab){
-        return {name : tabs[i].name, signals : signals, renderSequence : renderSequence};
+        return {name : tabs[i].name, signals : signals};
       }
       else return tab;
     });
@@ -121,12 +153,13 @@ function App() {
     setSelectionIndex(0);
     setSelectionTab(e);
     SetSignals(tabs[e].signals);
-    setRenderSequence(tabs[e].renderSequence);
+    setEditorText(signalToLine(tabs[e].signals));
+    setCanvasConfig(prev => ({...prev,timeStamp: maxTimeStamp(tabs[e].signals) + 10, signalCount : tabs[e].signals.length + 1}));
   }
 
   const handlerAddTab = (e) => {
     console.log(tabRenderSequence);
-    const newTab = {name : "tab " + tabs.length, signals : [], renderSequence : []};
+    const newTab = {name : "tab " + tabs.length, signals : []};
     setSelectionIndex(0);
     setTabs(prev => [...prev, newTab]);
     setTabRenderSequence(prev => [...prev, tabs.length]);
@@ -159,17 +192,20 @@ function App() {
   //mouse up
   const handlerMouseUpMain = (e) =>
   {
+    if(e.y >= signals.length)return;
+    if (Object.keys(signals[e.y]).includes('space'))return;
+    var updatedSignal = signals[e.y];
+    setSelectionIndex(e.y); 
     const distance = Math.sqrt(Math.pow(e.x - prevMousePos[0], 2) + Math.pow(e.y - prevMousePos[1], 2));
     //if the distance is close enough, no practical draggin is happening
-    if(distance >= 2)
+    if(distance >= 1)
     {
       const x = e.x;
+      const y = e.y;
       const x1 = prevMousePos[0];
-      const y = renderSequence.indexOf(prevMousePos[1]);
-      const copyBit = signals[y].wave[x1];
       //update signal
       if(y < canvasConfig.signalCount){
-        const updatedSignal = signals.map((signal, i) => {
+        updatedSignal = signals.map((signal, i) => {
           if(i === y){
             
             //strech signal
@@ -216,14 +252,14 @@ function App() {
     else 
     {
       const x = e.x;
-      const y = renderSequence.indexOf(e.y);
+      const y = e.y;
       //update signal
       if(y < canvasConfig.signalCount){
-        const updatedSignal = signals.map((signal, i) => {
+        updatedSignal = signals.map((signal, i) => {
           if(i === y){
             
             //strech signal
-            if(x > signal.wave.length)
+            if(x >= signal.wave.length)
             {
               let prevwave = signal.wave;
               let sig = signal.wave.split('');
@@ -306,38 +342,9 @@ function App() {
       }
     }
     setIsDraggin(false);
-  }
-
-  //Keyboard control
-  const handleKeyDown = (e) =>
-  {
-    const currentRenderIndex = renderSequence.indexOf(selectionIndex);
-    console.log("Selected id " + selectionIndex + " render index " + currentRenderIndex); 
-    //Move up
-    if(e === 'ArrowUp' && currentRenderIndex >= 1)
-    {
-      console.log("Moving up " + currentRenderIndex);
-      var newSequence = [...renderSequence];
-      var temp = renderSequence[currentRenderIndex];
-      newSequence[currentRenderIndex] = newSequence[currentRenderIndex-1];
-      newSequence[currentRenderIndex-1] = temp;
-      setRenderSequence(newSequence);
-      setSelectionIndex(selectionIndex);
-      console.log("Moved up ", newSequence);
-    }
-
-    //Move up
-    else if(e === 'ArrowDown' && currentRenderIndex < signals.length-1)
-    {
-      console.log("Moving Down " + currentRenderIndex);
-      newSequence = [...renderSequence];
-      temp = renderSequence[currentRenderIndex];
-      newSequence[currentRenderIndex] = newSequence[currentRenderIndex+1];
-      newSequence[currentRenderIndex+1] = temp;
-      setRenderSequence(newSequence);
-      setSelectionIndex(selectionIndex);
-      console.log("Moved Down ", newSequence);
-    }
+    setText(signalToLine(updatedSignal));
+    setEditorText(signalToLine(updatedSignal));
+    setCanvasConfig(prev => ({...prev,timeStamp: maxTimeStamp(updatedSignal) + 10 }));
   }
 
   //.................................MAIN HTML RETURN.........................................
@@ -349,15 +356,12 @@ function App() {
         <div id="banner">
           <img src={logo} className="App-logo" alt="logo" />
           <h1>WaveReact</h1>
-          <svg width = "100" height="200">
-            <circle cx="50" cy="50" r="5" stroke="red" fill="black"  strokeWidth="2"  />
-          </svg>
         </div>
         {/* The OUTPUT of the app. Signal and it's names */}
         <div id="output-panel">
 
           {/* Signal names div*/}
-          <SignalNameDiv signals={signals} renderSequence={renderSequence} selectionIndex={selectionIndex} Click={(id) => {setSelectionIndex(id)}} onAddButton={handlerAddbutton}/>
+          <SignalNameDiv signals={signals} selectionIndex={selectionIndex} Click={(id) => {setSelectionIndex(id)}} onAddButton={handlerAddbutton}/>
 
           {/* Signal renderer canvas */}
           <div id="canvas-wrapper">
@@ -368,7 +372,7 @@ function App() {
               />
               <SignalWindow
                 style={{ position: "absolute", top: 0, left: 0, zIndex: 2 }}
-                signals={signals} renderSequence={renderSequence} selectionIndex={selectionIndex} dx={canvasConfig.dx} dy={canvasConfig.dy} offsetY={canvasConfig.offsetY} timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount} onDown={handlerMouseDownMain} onMove={(e) => {handlerMouseMoveMain(e)}} onUp={(e) => {handlerMouseUpMain(e)}}
+                signals={signals} dx={canvasConfig.dx} dy={canvasConfig.dy} offsetY={canvasConfig.offsetY} timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount} onDown={handlerMouseDownMain} onMove={(e) => {handlerMouseMoveMain(e)}} onUp={(e) => {handlerMouseUpMain(e)}}
               />
             </div>
           </div>
@@ -376,24 +380,16 @@ function App() {
         
         {/* UI elements holder */}
         <div id="ui-panel">
+          <svg height="50" width="18">
+            <rect x="10" y="20" height="10" width="15" fill={error === null ? "black" : "red"}  strokeWidth="1"/>
+          </svg>
           <div className='control-group'>
-            <h3>Signals</h3>
-            {(selectionIndex >= 0 && signals.length > 0) && (<input className='input' type='text' value={signals[selectionIndex].name} onChange={(value) => handlerSignalNameInput(value)}></input>)}
-            {(selectionIndex >= 0 && signals.length > 0) && (<input className='input' type='text' value={signals[selectionIndex].wave} onChange={(value) => handlerWaveInput(value)}></input>)}
-            {(selectionIndex >= 0 && signals.length > 0) && (<input className='input' type='text' value={signals[selectionIndex].data} onChange={(value) => handlerDataInput(value)}></input>)}
-            {(selectionIndex >= 0 && signals.length > 0) && (<Slider name="Width" value={signals[selectionIndex].width} min={0.1} max={5} onChange={(e) => handlerSignalWidthSlider(e)}/>)}
-          </div>
-          <div className="control-group">
-            <h3>Controls</h3>
-            <Slider name="Time stamp" value={canvasConfig.timeStamp} min={5} max={500} onChange={(val) => setCanvasConfig(prev => ({...prev, timeStamp : val}))}/>
-            <Slider name="Time scale" value={canvasConfig.dx} min={15} max={80} onChange={(val) => setCanvasConfig(prev => ({...prev, dx : val}))}/>
-          </div>
-          <div contentEditable="true" className='control-group' style={{fontFamily:"monospace"}}>
-            {(selectionIndex >= 0 && signals.length > 0) && (<pre> <span style={{ color: 'blue', fontFamily:"courier"}}>Wave</span>: {JSON.stringify(signals, null, 2)} </pre>)}
+            {(<textarea spellCheck={false} className='textarea' rows={10} cols={100} value={editorText} onChange={(e) => handlerSignalCodeInput(e.target.value)}></textarea>)}
+            <button className='button-5' onClick={handleCodeFormat}>Auto-format</button>
           </div>
         </div>
         {/* Tab panel */}
-        <TabBar tabs={tabs} renderSequence={tabRenderSequence} selectionIndex={selectionTab} onKeyDown={handleKeyDown} onAddDown={handlerAddTab} onClick={handerlTabClick}/>
+        <TabBar tabs={tabs} renderSequence={tabRenderSequence} selectionIndex={selectionTab} onAddDown={handlerAddTab} onClick={handerlTabClick}/>
 
       </div>
     </div>
@@ -404,8 +400,88 @@ function App() {
 export default App;
 
 
-function flip(inp)
+// Convert flat line to JSON
+function lineToSignal(text) {
+  const requiredKeys = ["name", "wave", "data", "width"];
+  const lines = text.split("\n"); // Don't trim globally – preserve blank lines
+
+  return lines.map((line, index) => {
+    if (line.trim() === "") {
+      return { space: "1" };
+    }
+
+    const parts = line.trim().split(/\s{2,}/); // split by 2+ spaces
+    const obj = {};
+
+    for (const part of parts) {
+      const [key, ...rest] = part.split(":");
+      if (!key || rest.length === 0) throw new Error(`Invalid part: ${part}`);
+      obj[key.trim()] = rest.join(":").trim();
+    }
+
+    // Validate keys
+    const objKeys = Object.keys(obj);
+    const missingKeys = requiredKeys.filter(k => !(k in obj));
+    const extraKeys = objKeys.filter(k => !requiredKeys.includes(k));
+
+    if (missingKeys.length > 0) {
+      throw new Error(`Line ${index + 1}: Missing keys: ${missingKeys.join(", ")}`);
+    }
+    if (extraKeys.length > 0) {
+      throw new Error(`Line ${index + 1}: Unexpected keys: ${extraKeys.join(", ")}`);
+    }
+
+    // Optionally cast width to number
+    if (!isNaN(Number(obj.width))) {
+      obj.width = Number(obj.width);
+    }
+
+    return obj;
+  });
+}
+
+
+
+
+// Convert aligned version
+function signalToLine(list) {
+  const keys = ["name", "wave", "data", "width"];
+  const maxKeyLengths = {};
+
+  // Calculate max lengths only for signal entries (ignore space-only entries)
+  for (const key of keys) {
+    maxKeyLengths[key] = Math.max(
+      ...list
+        .filter(item => item[key] !== undefined)
+        .map(s => `${key}: ${s[key]}`.length)
+    );
+  }
+
+  return list
+    .map(signal => {
+      if ('space' in signal) {
+        const numSpaces = parseInt(signal.space, 10) || 1;
+        return '\n'.repeat(numSpaces); // one or more empty lines
+      }
+
+      return keys
+        .map(key => {
+          const value = signal[key] ?? "";
+          const field = `${key}: ${value}`;
+          return field.padEnd(maxKeyLengths[key] + 4); // 4 spaces after each field
+        })
+        .join("");
+    })
+    .join("\n");
+}
+
+function maxTimeStamp(signals)
 {
-  if(inp === '1')return '0';
-  else if( inp === '0')return '1';
+  var maxLen = 0;
+  signals.forEach(element => {
+    const len = !Object.keys(element).includes('space') ? element.wave.length : 0;
+    maxLen = len > maxLen ? len : maxLen;
+  });
+
+  return maxLen;
 }

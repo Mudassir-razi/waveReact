@@ -1,20 +1,32 @@
 
 import { useEffect, useRef } from "react";
-const div = 8;
+const div = 4;
 //coordinate lookup table
 
+const busColorScheme = {
 
+  '=' : 'white',
+  'a' : 'grey',
+  'b' : '#9fd5f5',
+  'c' : '#a2fad1',
+  'o' : '#ffca7a',
+  'y' : '#ebf5a4',
+  'g' : '#b5ebb2',
+  'r' : '#e88b8b',
+  'v' : '#f0c9f2',
+  'm' : '#edeca6'
+};
 
 //returns the main layer of the canvas, with all the signals rendered onto it
-export default function SignalWindow({signals, renderSequence, dx, dy, offsetY, timeStamp, signalCount, onDown, onMove, onUp})
+export default function SignalWindow({signals, dx, dy, timeStamp, signalCount, offsetY, onDown, onMove, onUp})
 {
   const signalWindowRef = useRef(null);
 
   //Renders the signals on the canvas  
   useEffect(()=>{
     const mainCanvas = signalWindowRef.current;
-    renderAllSignals(mainCanvas, renderSequence, signals, dx, dy, timeStamp, signalCount)
-  }, [signals, renderSequence, dx, dy, offsetY, timeStamp, signalCount]);
+    renderAllSignals(mainCanvas, signals, dx, dy);
+  }, [signals, dx, dy, offsetY, timeStamp, signalCount]);
 
 
   return(
@@ -50,30 +62,40 @@ export default function SignalWindow({signals, renderSequence, dx, dy, offsetY, 
 
 
 
-
-
 //renders all the signals on the grid
-function renderAllSignals(svg_canvas, sequence, signals, dx, dy, timeStamp, signalCount)
+function renderAllSignals(svg_canvas, signals, dx, dy)
 {
     var offsetY = 8;
     svg_canvas.innerHTML = ''; // Clear previous content
     //console.log("Rendering " + sequence.length + " signals with Settings: dx: " + dx + " dy: " + dy);
-    for(var i = 0; i < sequence.length; i++){
-        var signal = signals[sequence[i]].wave;
-        var data = signals[sequence[i]].data;
+    for(var i = 0; i < signals.length; i++){
+        if(Object.keys(signals[i]).includes('space'))continue;
+        var signal = signals[i].wave;
+        var data = signals[i].data;
         renderSignal(svg_canvas, signal, data, i, parseInt(dx), parseInt(dy), offsetY, signals[i].width);
     }
 }
 
 function renderSignal(ctx, wave, data, idx, dx, dy, offsetY, lineWidth)
 {
+
+  //For signal lines
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  //For signal shapes (buses)
+  const busShapes = [] ;
+  const busColors = [] ;
+  //For in-signal texts
+  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  
   var points = '';
   var shapes = '';
   var texts =  [];
+  var shapeStarted = false;
+
 
   var last = wave[0] === '1' ? '0' : '1';
   var dataIndex = 0;
-
+  
   const LUT = GetLUT(dx, dy, div, offsetY);
   for(var i = 0;i < wave.length; i++)
   {
@@ -85,11 +107,14 @@ function renderSignal(ctx, wave, data, idx, dx, dy, offsetY, lineWidth)
       var compare = prev === '.' ? last : prev;
       if(compare === '0')points += getWave('pos', i * dx, idx * (dy+offsetY), LUT);
       else if(compare === '1') points += getWave('1g', i * dx, idx * (dy+offsetY), LUT);
-      else if(compare === '=')
+      else if(Object.keys(busColorScheme).includes(compare))
       {
         shapes += getWave('bus1', i * dx, idx * (dy+offsetY), LUT);
+        busShapes.push(shapes);
         points += getWave('Lbus1', i * dx, idx * (dy+offsetY), LUT);
-      } 
+
+      }
+      shapeStarted = false; 
       last = '1';
     }
     
@@ -98,41 +123,60 @@ function renderSignal(ctx, wave, data, idx, dx, dy, offsetY, lineWidth)
       compare = prev === '.' ? last : prev;
       if(compare === '1')points += getWave('neg', i * dx, idx * (dy+offsetY), LUT);
       else if(compare === '0') points += getWave('0g', i * dx, idx * (dy+offsetY), LUT);
-      else if(compare === '=') 
+      else if(Object.keys(busColorScheme).includes(compare)) 
       {
         shapes += getWave('bus0', i * dx, idx * (dy+offsetY), LUT);
+        busShapes.push(shapes);
         points += getWave('Lbus0', i * dx, idx * (dy+offsetY), LUT);
       }
-        last = '0';
+      shapeStarted = false;
+      last = '0';
     }
-    else if (current === '=')
+    //if current is a bus '='
+    else if (Object.keys(busColorScheme).includes(current))
     {
       compare = prev === '.' ? last : prev;
       if(compare === '1')
       {
-        shapes += getWave('1bus', i * dx, idx * (dy+offsetY), LUT);
+        shapes = getWave('1bus', i * dx, idx * (dy+offsetY), LUT);
         points += getWave('L1bus', i * dx, idx * (dy+offsetY), LUT);
       }
       else if(compare === '0')
       { 
-        shapes += getWave('0bus', i * dx, idx * (dy+offsetY), LUT);
+        shapes = getWave('0bus', i * dx, idx * (dy+offsetY), LUT);
         points += getWave('L0bus', i * dx, idx * (dy+offsetY), LUT);
       }
-      else if(compare === '=')
+      else if(Object.keys(busColorScheme).includes(compare))
       {
-         shapes += getWave('bust', i * dx, idx * (dy+offsetY), LUT);
-         points += getWave('Lbust', i * dx, idx * (dy+offsetY), LUT);
+        
+        //close previous shape
+        shapes += getWave('bustS', i * dx, idx * (dy+offsetY), LUT);
+        busShapes.push(shapes);
+
+        shapes = getWave('bustE', i * dx, idx * (dy+offsetY), LUT);
+        points += getWave('Lbust', i * dx, idx * (dy+offsetY), LUT);
       }
+
+      //push colors
+      busColors.push(busColorScheme[current]);
 
       //add text
       if(data !== null){
+        var busLen = 0;
+        var j = i;
+        while(wave[j+1] === '.')
+        {
+          busLen++;
+          j++;
+        }
         const t1 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-        t1.setAttribute("x", i*dx+ dx*0.70);
+        t1.setAttribute("x", i*dx+ dx*0.70 + busLen*14);
         t1.setAttribute("y", idx * (dy+offsetY) + dy);
         t1.textContent = `${dataIndex < data.split(' ').length ? data.split(' ')[dataIndex] : ' '}`;
         texts.push(t1);
         dataIndex++;
       }
+      shapeStarted = true;
       last = '=';
     }
     else if (current === '.')
@@ -145,20 +189,20 @@ function renderSignal(ctx, wave, data, idx, dx, dy, offsetY, lineWidth)
       { 
         points += getWave('0', i * dx, idx * (dy+offsetY), LUT);
       }
-      else if(last === '=')
+      else if(Object.keys(busColorScheme).includes(last))
       {
         shapes += getWave('bus', i * dx, idx * (dy+offsetY), LUT);
         points += getWave('Lbus', i * dx, idx * (dy+offsetY), LUT);
       }
     }
   }
+  if(shapeStarted) busShapes.push(shapes);
 
-  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+
   text.setAttribute("x", 0);
   text.setAttribute("y", 0);
   text.setAttribute("fill", "black");
+  text.setAttribute("font-family", "monospace");
   text.setAttribute("font-size", "15");
   text.setAttribute("text-anchor", "middle");
   text.setAttribute("pointer-events", "none");
@@ -171,10 +215,26 @@ function renderSignal(ctx, wave, data, idx, dx, dy, offsetY, lineWidth)
   path.setAttribute("stroke", "black");
   path.setAttribute("fill", "none");
   path.setAttribute("stroke-width", lineWidth);
-  path2.setAttribute("d", shapes);
-  path2.setAttribute("stroke", "none");
-  path2.setAttribute("fill", "skyblue");
-  ctx.appendChild(path2);
+
+
+  //applying shapes
+  var colorIdx = 0;
+  busShapes.forEach(element => {
+    const busShape = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    busShape.setAttribute("d", element);
+    busShape.setAttribute("stroke", "none");
+    busShape.setAttribute("fill", busColors[colorIdx]);
+    busShape.setAttribute("fill-opacity", "0.5");
+    ctx.appendChild(busShape);
+    colorIdx++;
+  });
+
+  // path2.setAttribute("d", shapes);
+  // path2.setAttribute("stroke", "none");
+  // path2.setAttribute("fill", "skyblue");
+  // path2.setAttribute("fill-opacity", "0.5");
+
+  //ctx.appendChild(path2);
   ctx.appendChild(path);
   ctx.appendChild(text);
 }
@@ -219,9 +279,13 @@ function getWave(segment, offsetX, offsetY, LUT)
   {
     return `M${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${offsetX+LUT[1].x} ${offsetY+LUT[1].y} L${offsetX+LUT[7].x} ${offsetY+LUT[7].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y} L${offsetX+LUT[5].x} ${offsetY+LUT[5].y} z`;
   }
-  else if(segment === 'bust')
+  else if(segment === 'bustS')
   {
-    return `M${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${offsetX+LUT[1].x} ${offsetY+LUT[1].y} L${offsetX+LUT[4].x} ${offsetY+LUT[4].y} L${offsetX+LUT[6].x} ${offsetY+LUT[6].y} L${offsetX+LUT[5].x} ${offsetY+LUT[5].y} z M${offsetX+LUT[3].x} ${offsetY+LUT[3].y} L${offsetX+LUT[2].x} ${offsetY+LUT[2].y} L${offsetX+LUT[4].x} ${offsetY+LUT[4].y} L${offsetX+LUT[7].x} ${offsetY+LUT[7].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y} z`;
+    return `M${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${offsetX+LUT[1].x} ${offsetY+LUT[1].y} L${offsetX+LUT[4].x} ${offsetY+LUT[4].y} L${offsetX+LUT[6].x} ${offsetY+LUT[6].y} L${offsetX+LUT[5].x} ${offsetY+LUT[5].y} z`;
+  }
+  else if(segment === 'bustE')
+  {
+    return `M${offsetX+LUT[3].x} ${offsetY+LUT[3].y} L${offsetX+LUT[2].x} ${offsetY+LUT[2].y} L${offsetX+LUT[4].x} ${offsetY+LUT[4].y} L${offsetX+LUT[7].x} ${offsetY+LUT[7].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y} z`;
   }
 
   //bus shape ends
@@ -263,10 +327,11 @@ function getWave(segment, offsetX, offsetY, LUT)
   }
 }
 
+//Look-up table for the points on the signal segment
 function GetLUT(dx, dy, div, offsetY)
 {
-  var dx1 = dx/div;
-  var dx2 = dx/div;
+  var dx1 = Math.floor(0.5 * dx/div);
+  var dx2 = Math.floor(dx/div);
   var dx3 = dx - (dx1 + dx2);
   var bo = offsetY;
   var lut = [{x:0, y:bo+dy}, {x:dx1, y:bo+dy}, {x:dx1+dx2, y:bo+dy}, {x:dx1+dx2+dx3, y:bo+dy}, {x:dx1+dx2/2, y:bo+dy/2},

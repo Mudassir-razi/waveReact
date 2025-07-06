@@ -7,9 +7,9 @@
         
 
         {
-            "type": "msedge",
+            "type": "firefox",
             "request": "launch",
-            "name": "Launch React App in Edge",
+            "name": "Launch React App on firefox",
             "url": "http://localhost:3000",
             "webRoot": "${workspaceFolder}/src",
             "trace" : true

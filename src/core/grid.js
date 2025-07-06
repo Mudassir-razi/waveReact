@@ -21,7 +21,8 @@ export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetY, timeS
             x2={x}
             y2={signalCount * (dy + offsetY)}
             stroke="gray"
-            strokeWidth={1}
+            strokeOpacity={0.25}
+            strokeWidth={0.5}
             strokeDasharray="4 4"
             pointerEvents="none"
         />
@@ -42,6 +43,7 @@ export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetY, timeS
                 x2={dragging ? prevMouse[0] * dx : mouse[0] * dx}
                 y2={(signalCount * (dy + offsetY) + 5)}
                 stroke={"black"}
+                strokeOpacity={0.25}
                 strokeWidth={2}
                 pointerEvents="none" // does not block mouse events
             />
@@ -52,6 +54,7 @@ export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetY, timeS
                 y2={(signalCount * (dy + offsetY) + 5)}
                 stroke={"black"}
                 strokeWidth={2}
+                strokeOpacity={0.25}
                 pointerEvents="none" // does not block mouse events
             />
 
