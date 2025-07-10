@@ -18,15 +18,15 @@ const busColorScheme = {
 };
 
 //returns the main layer of the canvas, with all the signals rendered onto it
-export default function SignalWindow({signals, dx, dy, timeStamp, signalCount, offsetY, onDown, onMove, onUp})
+export default function SignalWindow({signals, dx, dy, timeStamp, signalCount, offsetX, offsetY, onDown, onMove, onUp})
 {
   const signalWindowRef = useRef(null);
 
   //Renders the signals on the canvas  
   useEffect(()=>{
     const mainCanvas = signalWindowRef.current;
-    renderAllSignals(mainCanvas, signals, dx, dy);
-  }, [signals, dx, dy, offsetY, timeStamp, signalCount]);
+    renderAllSignals(mainCanvas, signals, dx, dy, offsetY);
+  }, [signals, dx, dy, offsetX, offsetY, timeStamp, signalCount, onDown, onMove, onUp]);
 
 
   return(
@@ -35,7 +35,8 @@ export default function SignalWindow({signals, dx, dy, timeStamp, signalCount, o
       id="mainLayer" 
       width={timeStamp * dx} 
       height={signalCount * (dy + offsetY) + 5} 
-      style={{ position: "absolute", top: 0, left: 0, zIndex: 2, backgroundColor: "transparent" }}
+      viewBox={`0 0 ${timeStamp * dx} ${signalCount * (dy + offsetY) + 5}`}
+      style={{ position: "absolute", top: 0, left: offsetX, zIndex: 2, backgroundColor: "transparent" }}
       onMouseDown={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         const x = Math.floor((e.clientX - rect.left) / dx);
@@ -63,20 +64,20 @@ export default function SignalWindow({signals, dx, dy, timeStamp, signalCount, o
 
 
 //renders all the signals on the grid
-function renderAllSignals(svg_canvas, signals, dx, dy)
+function renderAllSignals(svg_canvas, signals, dx, dy, offsetY)
 {
-    var offsetY = 8;
     svg_canvas.innerHTML = ''; // Clear previous content
     //console.log("Rendering " + sequence.length + " signals with Settings: dx: " + dx + " dy: " + dy);
     for(var i = 0; i < signals.length; i++){
         if(Object.keys(signals[i]).includes('space'))continue;
+        var name = signals[i].name;
         var signal = signals[i].wave;
         var data = signals[i].data;
-        renderSignal(svg_canvas, signal, data, i, parseInt(dx), parseInt(dy), offsetY, signals[i].width);
+        renderSignal(svg_canvas, name, signal, data, i, parseInt(dx), parseInt(dy), offsetY, signals[i].width);
     }
 }
 
-function renderSignal(ctx, wave, data, idx, dx, dy, offsetY, lineWidth)
+function renderSignal(ctx, name, wave, data, idx, dx, dy, offsetY, lineWidth)
 {
 
   //For signal lines
@@ -95,8 +96,10 @@ function renderSignal(ctx, wave, data, idx, dx, dy, offsetY, lineWidth)
 
   var last = wave[0] === '1' ? '0' : '1';
   var dataIndex = 0;
-  
+
   const LUT = GetLUT(dx, dy, div, offsetY);
+
+
   for(var i = 0;i < wave.length; i++)
   {
     var current = wave[i];
@@ -105,13 +108,13 @@ function renderSignal(ctx, wave, data, idx, dx, dy, offsetY, lineWidth)
     if(current === '1')
     {
       var compare = prev === '.' ? last : prev;
-      if(compare === '0')points += getWave('pos', i * dx, idx * (dy+offsetY), LUT);
-      else if(compare === '1') points += getWave('1g', i * dx, idx * (dy+offsetY), LUT);
+      if(compare === '0' || compare === 'p')points += getWave('pos', i * dx, idx * (dy+offsetY), LUT);
+      else if(compare === '1' || compare === 'n') points += getWave('1g', i * dx, idx * (dy+offsetY), LUT);
       else if(Object.keys(busColorScheme).includes(compare))
       {
-        shapes += getWave('bus1', i * dx, idx * (dy+offsetY), LUT);
+        shapes += getWave('bus1', i * dx , idx * (dy+offsetY), LUT);
         busShapes.push(shapes);
-        points += getWave('Lbus1', i * dx, idx * (dy+offsetY), LUT);
+        points += getWave('Lbus1', i * dx , idx * (dy+offsetY), LUT);
 
       }
       shapeStarted = false; 
@@ -121,47 +124,61 @@ function renderSignal(ctx, wave, data, idx, dx, dy, offsetY, lineWidth)
     else if (current === '0')
     {
       compare = prev === '.' ? last : prev;
-      if(compare === '1')points += getWave('neg', i * dx, idx * (dy+offsetY), LUT);
-      else if(compare === '0') points += getWave('0g', i * dx, idx * (dy+offsetY), LUT);
+      if(compare === '1' || compare === 'n')points += getWave('neg', i * dx , idx * (dy+offsetY), LUT);
+      else if(compare === '0' || compare === 'p') points += getWave('0g', i * dx , idx * (dy+offsetY), LUT);
       else if(Object.keys(busColorScheme).includes(compare)) 
       {
-        shapes += getWave('bus0', i * dx, idx * (dy+offsetY), LUT);
+        shapes += getWave('bus0', i * dx , idx * (dy+offsetY), LUT);
         busShapes.push(shapes);
-        points += getWave('Lbus0', i * dx, idx * (dy+offsetY), LUT);
+        points += getWave('Lbus0', i * dx , idx * (dy+offsetY), LUT);
       }
       shapeStarted = false;
       last = '0';
     }
+
+    //For clock positive edge
+    else if( current === 'p')
+    {
+      points += getWave('p', i * dx , idx * (dy+offsetY), LUT);
+      last = 'p'
+    }
+
+    else if( current === 'n')
+    {
+      points += getWave('n', i * dx , idx * (dy+offsetY), LUT);
+      last = 'n';
+    }
+
     //if current is a bus '='
     else if (Object.keys(busColorScheme).includes(current))
     {
       compare = prev === '.' ? last : prev;
-      if(compare === '1')
+      if(compare === '1' || compare === 'n')
       {
-        shapes = getWave('1bus', i * dx, idx * (dy+offsetY), LUT);
-        points += getWave('L1bus', i * dx, idx * (dy+offsetY), LUT);
+        shapes = getWave('1bus', i * dx , idx * (dy+offsetY), LUT);
+        points += getWave('L1bus', i * dx , idx * (dy+offsetY), LUT);
       }
-      else if(compare === '0')
+      else if(compare === '0' || compare === 'p')
       { 
-        shapes = getWave('0bus', i * dx, idx * (dy+offsetY), LUT);
-        points += getWave('L0bus', i * dx, idx * (dy+offsetY), LUT);
+        shapes = getWave('0bus', i * dx  , idx * (dy+offsetY), LUT);
+        points += getWave('L0bus', i * dx  , idx * (dy+offsetY), LUT);
       }
       else if(Object.keys(busColorScheme).includes(compare))
       {
         
         //close previous shape
-        shapes += getWave('bustS', i * dx, idx * (dy+offsetY), LUT);
+        shapes += getWave('bustS', i * dx , idx * (dy+offsetY), LUT);
         busShapes.push(shapes);
 
-        shapes = getWave('bustE', i * dx, idx * (dy+offsetY), LUT);
-        points += getWave('Lbust', i * dx, idx * (dy+offsetY), LUT);
+        shapes = getWave('bustE', i * dx  , idx * (dy+offsetY), LUT);
+        points += getWave('Lbust', i * dx  , idx * (dy+offsetY), LUT);
       }
 
       //push colors
       busColors.push(busColorScheme[current]);
 
       //add text
-      if(data !== null){
+      try{
         var busLen = 0;
         var j = i;
         while(wave[j+1] === '.')
@@ -170,11 +187,15 @@ function renderSignal(ctx, wave, data, idx, dx, dy, offsetY, lineWidth)
           j++;
         }
         const t1 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-        t1.setAttribute("x", i*dx+ dx*0.70 + busLen*14);
-        t1.setAttribute("y", idx * (dy+offsetY) + dy);
+        t1.setAttribute("x", i*dx + dx*0.70 + busLen*14);
+        t1.setAttribute("y", idx * (dy+offsetY) + 0.90*dy);
         t1.textContent = `${dataIndex < data.split(' ').length ? data.split(' ')[dataIndex] : ' '}`;
         texts.push(t1);
         dataIndex++;
+      }
+      catch (e)
+      {
+        console.log("No data available");
       }
       shapeStarted = true;
       last = '=';
@@ -183,17 +204,26 @@ function renderSignal(ctx, wave, data, idx, dx, dy, offsetY, lineWidth)
     {
       if(last === '1')
       {
-        points += getWave('1', i * dx, idx * (dy+offsetY), LUT);
+        points += getWave('1', i * dx , idx * (dy+offsetY), LUT);
       }
       else if(last === '0')
       { 
-        points += getWave('0', i * dx, idx * (dy+offsetY), LUT);
+        points += getWave('0', i * dx , idx * (dy+offsetY), LUT);
+      }
+      else if(last === 'p')
+      {
+        points += getWave('p', i * dx , idx * (dy+offsetY), LUT);
+      }
+      else if(last === 'n')
+      {
+        points += getWave('n', i * dx , idx * (dy+offsetY), LUT);
       }
       else if(Object.keys(busColorScheme).includes(last))
       {
-        shapes += getWave('bus', i * dx, idx * (dy+offsetY), LUT);
-        points += getWave('Lbus', i * dx, idx * (dy+offsetY), LUT);
+        shapes += getWave('bus', i * dx , idx * (dy+offsetY), LUT);
+        points += getWave('Lbus', i * dx , idx * (dy+offsetY), LUT);
       }
+      
     }
   }
   if(shapeStarted) busShapes.push(shapes);
@@ -215,6 +245,7 @@ function renderSignal(ctx, wave, data, idx, dx, dy, offsetY, lineWidth)
   path.setAttribute("stroke", "black");
   path.setAttribute("fill", "none");
   path.setAttribute("stroke-width", lineWidth);
+  path.setAttribute("shapreRendering", "crispEdges");
 
 
   //applying shapes
@@ -257,6 +288,15 @@ function getWave(segment, offsetX, offsetY, LUT)
   {
     return `M${offsetX+LUT[5].x} ${offsetY+LUT[5].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y}`;
   }
+  else if(segment === 'p')
+  {
+    return `M${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${offsetX+LUT[5].x} ${offsetY+LUT[5].y} L${Math.floor((offsetX+LUT[5].x + offsetX+LUT[8].x)/2)} ${offsetY+LUT[7].y} L${Math.floor((offsetX+LUT[5].x + offsetX+LUT[8].x)/2)} ${offsetY+LUT[2].y} L${offsetX+LUT[3].x} ${offsetY+LUT[3].y}`;
+  }
+  else if(segment === 'n')
+  {
+    return `M${offsetX+LUT[5].x} ${offsetY+LUT[5].y} L${offsetX+LUT[0].x} ${offsetY+LUT[0].y} L${Math.floor((offsetX+LUT[5].x + offsetX+LUT[8].x)/2)} ${offsetY+LUT[0].y} L${Math.floor((offsetX+LUT[5].x + offsetX+LUT[8].x)/2)} ${offsetY+LUT[5].y} L${offsetX+LUT[8].x} ${offsetY+LUT[8].y}`;
+  }
+
 
   //bus shapes
   else if(segment === 'bus')
@@ -330,10 +370,10 @@ function getWave(segment, offsetX, offsetY, LUT)
 //Look-up table for the points on the signal segment
 function GetLUT(dx, dy, div, offsetY)
 {
-  var dx1 = Math.floor(0.5 * dx/div);
-  var dx2 = Math.floor(dx/div);
-  var dx3 = dx - (dx1 + dx2);
-  var bo = offsetY;
+  var dx1 = Math.floor(0.5 * dx/div) + 0.5;
+  var dx2 = Math.floor(0.75 * dx/div) + 0.5;
+  var dx3 = dx - (dx1 + dx2) + 0.5;
+  var bo = offsetY + 0.5;
   var lut = [{x:0, y:bo+dy}, {x:dx1, y:bo+dy}, {x:dx1+dx2, y:bo+dy}, {x:dx1+dx2+dx3, y:bo+dy}, {x:dx1+dx2/2, y:bo+dy/2},
   {x:0, y:bo}, {x:dx1, y:bo}, {x:dx1+dx2, y:bo}, {x:dx1+dx2+dx3, y:bo}];
 

@@ -16,13 +16,13 @@ export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetY, timeS
         return (
         <line
             key={i}
-            x1={x}
-            y1={0}
-            x2={x}
-            y2={signalCount * (dy + offsetY)}
+            x1={x + 0.5}
+            y1={0.5}
+            x2={x + 0.5}
+            y2={signalCount * (dy + offsetY) + 0.5}
             stroke="gray"
             strokeOpacity={0.25}
-            strokeWidth={0.5}
+            strokeWidth={1}
             strokeDasharray="4 4"
             pointerEvents="none"
         />
@@ -38,23 +38,23 @@ export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetY, timeS
         >
             {gridLines}
             <line
-                x1={dragging ? prevMouse[0] * dx : mouse[0] * dx}
-                y1={0}
-                x2={dragging ? prevMouse[0] * dx : mouse[0] * dx}
-                y2={(signalCount * (dy + offsetY) + 5)}
-                stroke={"black"}
-                strokeOpacity={0.25}
-                strokeWidth={2}
+                x1={(dragging ? prevMouse[0] * dx : mouse[0] * dx) + 0.5}
+                y1={0.5}
+                x2={(dragging ? prevMouse[0] * dx : mouse[0] * dx) + 0.5}
+                y2={(signalCount * (dy + offsetY) + 5.5)}
+                stroke={"red"}
+                strokeOpacity={1}
+                strokeWidth={1}
                 pointerEvents="none" // does not block mouse events
             />
             <line
-                x1={(mouse[0]+1) * dx}
-                y1={0}
-                x2={(mouse[0]+1) * dx}
-                y2={(signalCount * (dy + offsetY) + 5)}
-                stroke={"black"}
-                strokeWidth={2}
-                strokeOpacity={0.25}
+                x1={(mouse[0]+1) * dx + 0.5}
+                y1={0.5}
+                x2={(mouse[0]+1) * dx + 0.5}
+                y2={(signalCount * (dy + offsetY) + 5.5)}
+                stroke={"red"}
+                strokeWidth={1}
+                strokeOpacity={1}
                 pointerEvents="none" // does not block mouse events
             />
 

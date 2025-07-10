@@ -14,10 +14,11 @@ function App() {
   const [canvasConfig, setCanvasConfig] = useState({
     
     dx: 30,
-    dy: 30,
+    dy: 20,
     timeStamp: 40,
     signalCount: 0,
     offsetY: 8,
+    offsetX: 0,
     bgColor: "#000000",
     gridColor: "#FFFFFF"
   
@@ -49,16 +50,17 @@ function App() {
   const[prevMousePos, setPrevMousePos] = useState([0,0]);
   const[isDragging, setIsDraggin] = useState(false);
   
-  // useEffect(() => {
-  //   setText(signalToLine(signals));
+  useEffect(() => {
+    setText(signalToLine(signals));
     
-  // }, [signals]);
+  }, [signals]);
 
   useEffect(()=> 
   {
     //Keyboard control
     const handleKeyDown = (e) =>
     {
+      
       var updatedSignal = signals;
       //duplicate selected wave.
       if(e.key === 'd' && document.activeElement.tagName.toLowerCase() !== 'textarea')
@@ -84,10 +86,11 @@ function App() {
           }
           else return signal;
         });
+
         SetSignals(updatedSignal);
         setText(signalToLine(updatedSignal));
         setEditorText(signalToLine(updatedSignal));
-        setCanvasConfig(prev => ({...prev,timeStamp: maxTimeStamp(updatedSignal) + 10 }));
+        setCanvasConfig(prev => ({...prev, offsetX : GetMaxNameLen(updatedSignal),timeStamp: maxTimeStamp(updatedSignal) + 10 }));
       }
     }
 
@@ -97,8 +100,7 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown);
     };
 
-
-  }, []);
+  }, [selectionIndex, signals]);
 
   //................................ EVENT HANDLERS............................................
   //Adds new signal
@@ -111,7 +113,7 @@ function App() {
     SetSignals(prev => [...prev, newItem]);
     setText(signalToLine(updatedSignal));
     setEditorText(signalToLine(updatedSignal));
-    setCanvasConfig(prev => ({...prev,timeStamp: maxTimeStamp(updatedSignal) + 10, signalCount : updatedSignal.length + 1}));
+    setCanvasConfig(prev => ({...prev,offsetX : GetMaxNameLen(updatedSignal), timeStamp: maxTimeStamp(updatedSignal) + 10, signalCount : updatedSignal.length + 1}));
   };
 
   const handleCodeFormat = () => {
@@ -127,7 +129,7 @@ function App() {
       const jsonObj = lineToSignal(newText); // convert to JSON array
       SetSignals(jsonObj); // Only if valid
       setText(signalToLine(signals));
-      setCanvasConfig(prev => ({...prev,timeStamp: maxTimeStamp(jsonObj) + 10, signalCount : jsonObj.length + 1}));
+      setCanvasConfig(prev => ({...prev,offsetX : GetMaxNameLen(jsonObj), timeStamp: maxTimeStamp(jsonObj) + 10, signalCount : jsonObj.length + 1}));
       setError(null);
     } catch (e) {
       console.log("Invalid format");
@@ -154,7 +156,7 @@ function App() {
     setSelectionTab(e);
     SetSignals(tabs[e].signals);
     setEditorText(signalToLine(tabs[e].signals));
-    setCanvasConfig(prev => ({...prev,timeStamp: maxTimeStamp(tabs[e].signals) + 10, signalCount : tabs[e].signals.length + 1}));
+    setCanvasConfig(prev => ({...prev,offsetX : GetMaxNameLen(tabs[e].signals), timeStamp: maxTimeStamp(tabs[e].signals) + 10, signalCount : tabs[e].signals.length + 1}));
   }
 
   const handlerAddTab = (e) => {
@@ -344,7 +346,7 @@ function App() {
     setIsDraggin(false);
     setText(signalToLine(updatedSignal));
     setEditorText(signalToLine(updatedSignal));
-    setCanvasConfig(prev => ({...prev,timeStamp: maxTimeStamp(updatedSignal) + 10 }));
+    setCanvasConfig(prev => ({...prev,offsetX : GetMaxNameLen(updatedSignal), timeStamp: maxTimeStamp(updatedSignal) + 10 }));
   }
 
   //.................................MAIN HTML RETURN.........................................
@@ -372,7 +374,7 @@ function App() {
               />
               <SignalWindow
                 style={{ position: "absolute", top: 0, left: 0, zIndex: 2 }}
-                signals={signals} dx={canvasConfig.dx} dy={canvasConfig.dy} offsetY={canvasConfig.offsetY} timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount} onDown={handlerMouseDownMain} onMove={(e) => {handlerMouseMoveMain(e)}} onUp={(e) => {handlerMouseUpMain(e)}}
+                signals={signals} dx={canvasConfig.dx} dy={canvasConfig.dy} offsetX={canvasConfig.offsetX} offsetY={canvasConfig.offsetY} timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount} onDown={handlerMouseDownMain} onMove={(e) => {handlerMouseMoveMain(e)}} onUp={(e) => {handlerMouseUpMain(e)}}
               />
             </div>
           </div>
@@ -402,7 +404,7 @@ export default App;
 
 // Convert flat line to JSON
 function lineToSignal(text) {
-  const requiredKeys = ["name", "wave", "data", "width"];
+  const requiredKeys = ["name", "wave"];
   const lines = text.split("\n"); // Don't trim globally – preserve blank lines
 
   return lines.map((line, index) => {
@@ -422,13 +424,9 @@ function lineToSignal(text) {
     // Validate keys
     const objKeys = Object.keys(obj);
     const missingKeys = requiredKeys.filter(k => !(k in obj));
-    const extraKeys = objKeys.filter(k => !requiredKeys.includes(k));
 
     if (missingKeys.length > 0) {
       throw new Error(`Line ${index + 1}: Missing keys: ${missingKeys.join(", ")}`);
-    }
-    if (extraKeys.length > 0) {
-      throw new Error(`Line ${index + 1}: Unexpected keys: ${extraKeys.join(", ")}`);
     }
 
     // Optionally cast width to number
@@ -484,4 +482,18 @@ function maxTimeStamp(signals)
   });
 
   return maxLen;
+}
+
+//returns the maximum length 
+function GetMaxNameLen(signals)
+{
+  var maxNameLen = 0;
+  signals.forEach(element => {
+    if(Object.keys(element).includes("name"))
+    {
+      const len = element.name.length;
+      maxNameLen = len > maxNameLen ? len : maxNameLen;
+    }
+  });
+  return maxNameLen;
 }
