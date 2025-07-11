@@ -2,14 +2,14 @@
 import { settings } from "./config.js";
 import { useEffect, useRef } from "react";
 
-export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetY, timeStamp, signalCount}){
+export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetX, offsetY, timeStamp, signalCount}){
 
     const BGcanvasRef = useRef(null);
     
     useEffect(() => {
         const svg_bg_canvas = BGcanvasRef.current;
 
-    }, [dx, dy, mouse, prevMouse, dragging, timeStamp, signalCount, offsetY]);
+    }, [dx, dy, mouse, prevMouse, dragging, offsetX, offsetY, timeStamp, signalCount]);
 
     const gridLines = Array.from({ length: timeStamp }, (_, i) => {
         const x = i * dx;
@@ -34,7 +34,7 @@ export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetY, timeS
         ref={BGcanvasRef}
         width={timeStamp * dx} 
         height={signalCount * (dy + offsetY) + 5}
-        style={{ position: "absolute", top: 0, left: 0, zIndex: 1 }} 
+        style={{ position: "absolute", top: 0, left: offsetX, zIndex: 1, backgroundColor:"transparent"}} 
         >
             {gridLines}
             <line

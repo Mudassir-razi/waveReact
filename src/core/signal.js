@@ -204,19 +204,19 @@ function renderSignal(ctx, name, wave, data, idx, dx, dy, offsetY, lineWidth)
     {
       if(last === '1')
       {
-        points += getWave('1', i * dx , idx * (dy+offsetY), LUT);
+        points += getWave('1', i * dx, idx * (dy+offsetY), LUT);
       }
       else if(last === '0')
       { 
-        points += getWave('0', i * dx , idx * (dy+offsetY), LUT);
+        points += getWave('0', i * dx, idx * (dy+offsetY), LUT);
       }
       else if(last === 'p')
       {
-        points += getWave('p', i * dx , idx * (dy+offsetY), LUT);
+        points += getWave('p', i * dx, idx * (dy+offsetY), LUT);
       }
       else if(last === 'n')
       {
-        points += getWave('n', i * dx , idx * (dy+offsetY), LUT);
+        points += getWave('n', i * dx, idx * (dy+offsetY), LUT);
       }
       else if(Object.keys(busColorScheme).includes(last))
       {
@@ -378,4 +378,15 @@ function GetLUT(dx, dy, div, offsetY)
   {x:0, y:bo}, {x:dx1, y:bo}, {x:dx1+dx2, y:bo}, {x:dx1+dx2+dx3, y:bo}];
 
   return lut;
+}
+
+
+//evaluates string
+function evaluateExpression(expr) {
+  try {
+    const fn = new Function(`return (${JSON.stringify(expr)});`);
+    return fn();
+  } catch (e) {
+    return `Error: ${e.message}`;
+  }
 }

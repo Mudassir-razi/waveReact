@@ -129,7 +129,7 @@ function App() {
       const jsonObj = lineToSignal(newText); // convert to JSON array
       SetSignals(jsonObj); // Only if valid
       setText(signalToLine(signals));
-      setCanvasConfig(prev => ({...prev,offsetX : GetMaxNameLen(jsonObj), timeStamp: maxTimeStamp(jsonObj) + 10, signalCount : jsonObj.length + 1}));
+      setCanvasConfig(prev => ({...prev,offsetX : GetMaxNameLen(jsonObj), timeStamp: maxTimeStamp(jsonObj) + 10, signalCount : jsonObj.length}));
       setError(null);
     } catch (e) {
       console.log("Invalid format");
@@ -177,7 +177,7 @@ function App() {
     newMousePos[0] = e.x;
     newMousePos[1] = e.y;
     setPrevMousePos(newMousePos);
-    setIsDraggin(true);
+    if(e.y < canvasConfig.signalCount)setIsDraggin(true);
   };
 
   //mouse move
@@ -196,6 +196,7 @@ function App() {
   {
     if(e.y >= signals.length)return;
     if (Object.keys(signals[e.y]).includes('space'))return;
+    console.log("Mouse up");
     var updatedSignal = signals[e.y];
     setSelectionIndex(e.y); 
     const distance = Math.sqrt(Math.pow(e.x - prevMousePos[0], 2) + Math.pow(e.y - prevMousePos[1], 2));
@@ -362,18 +363,26 @@ function App() {
         {/* The OUTPUT of the app. Signal and it's names */}
         <div id="output-panel">
 
-          {/* Signal names div*/}
-          <SignalNameDiv signals={signals} selectionIndex={selectionIndex} Click={(id) => {setSelectionIndex(id)}} onAddButton={handlerAddbutton}/>
-
           {/* Signal renderer canvas */}
           <div id="canvas-wrapper">
-            <div style={{ width: canvasConfig.timeStamp * canvasConfig.dx, height: canvasConfig.signalCount * (canvasConfig.dy + canvasConfig.offsetY) + 100, position: 'relative' }}>
+            {/* Signal names div*/}
+            <SignalNameDiv 
+              style={{ position: "sticky", top: 0, left: 0, zIndex: 3}} 
+              signals={signals} 
+              dy = {canvasConfig.dy}
+              offsetX={canvasConfig.offsetX}
+              offsetY={canvasConfig.offsetY}
+              signalCount={canvasConfig.signalCount}
+              selectionIndex={selectionIndex} 
+              Click={(id) => {setSelectionIndex(id)}} 
+            />
+            <div style={{ overflow:'auto', width: canvasConfig.timeStamp * canvasConfig.dx + 100, height: canvasConfig.signalCount * (canvasConfig.dy + canvasConfig.offsetY) + 100, position: 'relative' }}>
               <Grid
-                style={{ position: "absolute", top: 0, left: 0, zIndex: 1 }} 
-                dx={canvasConfig.dx} dy={canvasConfig.dy} mouse={mousePos} prevMouse={prevMousePos} dragging={isDragging} offsetY={canvasConfig.offsetY}timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount}
+                style={{ position: "absolute", top: 0, left: canvasConfig.offsetX, zIndex: 1 }} 
+                dx={canvasConfig.dx} dy={canvasConfig.dy} mouse={mousePos} prevMouse={prevMousePos} dragging={isDragging} offsetX={canvasConfig.offsetX} offsetY={canvasConfig.offsetY}timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount}
               />
               <SignalWindow
-                style={{ position: "absolute", top: 0, left: 0, zIndex: 2 }}
+                style={{ position: "absolute", top: 0, left: canvasConfig.offsetX, zIndex: 2 }}
                 signals={signals} dx={canvasConfig.dx} dy={canvasConfig.dy} offsetX={canvasConfig.offsetX} offsetY={canvasConfig.offsetY} timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount} onDown={handlerMouseDownMain} onMove={(e) => {handlerMouseMoveMain(e)}} onUp={(e) => {handlerMouseUpMain(e)}}
               />
             </div>
@@ -382,12 +391,15 @@ function App() {
         
         {/* UI elements holder */}
         <div id="ui-panel">
-          <svg height="50" width="18">
-            <rect x="10" y="20" height="10" width="15" fill={error === null ? "black" : "red"}  strokeWidth="1"/>
-          </svg>
+          <div className='control-group'>
+            <svg height="20" width="15">
+              <rect x="0" y="0" height="10" width="15" fill={error === null ? "green" : "red"}  strokeWidth="1"/>
+            </svg>
+            <button className='button-5' onClick={handlerAddbutton}> Add new </button>
+            <button className='button-5' onClick={handleCodeFormat}>Auto-format</button>
+          </div>
           <div className='control-group'>
             {(<textarea spellCheck={false} className='textarea' rows={10} cols={100} value={editorText} onChange={(e) => handlerSignalCodeInput(e.target.value)}></textarea>)}
-            <button className='button-5' onClick={handleCodeFormat}>Auto-format</button>
           </div>
         </div>
         {/* Tab panel */}
@@ -495,5 +507,5 @@ function GetMaxNameLen(signals)
       maxNameLen = len > maxNameLen ? len : maxNameLen;
     }
   });
-  return maxNameLen;
+  return maxNameLen*9 + 22;
 }
