@@ -2,17 +2,18 @@ import logo from './logo.svg';
 import './App.css';
 import './comp/button';
 import Grid from './core/grid';
-import { useState, useEffect} from 'react';
+import { useState, useEffect } from 'react';
 import SignalWindow from './core/signal';
 import SignalNameDiv from './comp/signalNameDivl';
 import TabBar from './comp/tabBar';
+import CollapsibleTab from './comp/CollapsibleTab';
 
 function App() {
 
   //................................STATES...................................................
   //canvas config
   const [canvasConfig, setCanvasConfig] = useState({
-    
+
     dx: 30,
     dy: 20,
     timeStamp: 40,
@@ -21,11 +22,11 @@ function App() {
     offsetX: 0,
     bgColor: "#000000",
     gridColor: "#FFFFFF"
-  
+
   });
-  
+
   //tab data
-  const[tabs, setTabs] = useState([{name : "tab 0", signals : []}]);
+  const [tabs, setTabs] = useState([{ name: "tab 0", signals: [] }]);
 
   //Signal data
   const [signals, SetSignals] = useState([]);
@@ -40,46 +41,40 @@ function App() {
   const [selectionIndex, setSelectionIndex] = useState(-1);
 
   //selected tab
-  const[selectionTab, setSelectionTab] = useState(0);
+  const [selectionTab, setSelectionTab] = useState(0);
 
   //mouse position
-  const[mousePos, setMousePos] = useState([0,0]);
-  const[prevMousePos, setPrevMousePos] = useState([0,0]);
-  const[isDragging, setIsDraggin] = useState(false);
-  
+  const [mousePos, setMousePos] = useState([0, 0]);
+  const [prevMousePos, setPrevMousePos] = useState([0, 0]);
+  const [isDragging, setIsDraggin] = useState(false);
+
 
   useEffect(() => {
     setText(signalToLine(signals));
-    
+
   }, [signals]);
 
-  useEffect(()=> 
-  {
+  useEffect(() => {
     //Keyboard control
-    const handleKeyDown = (e) =>
-    {
-      
+    const handleKeyDown = (e) => {
+
       var updatedSignal = signals;
       //duplicate selected wave.
-      if(e.key === 'd' && document.activeElement.tagName.toLowerCase() !== 'textarea')
-      {
-        updatedSignal = signals.map((signal, i) => { 
-          if(i === selectionIndex)
-          {
+      if (e.key === 'd' && document.activeElement.tagName.toLowerCase() !== 'textarea') {
+        updatedSignal = signals.map((signal, i) => {
+          if (i === selectionIndex) {
             var currentWave = signal.wave;
-            if(currentWave[0] !== currentWave[currentWave.length-1] && currentWave[currentWave.length-1] !== '.')return {name : signal.name, wave : signal.wave + signal.wave, width : signal.width, data : signal.data + ' ' + signal.data};
-            else 
-            {
+            if (currentWave[0] !== currentWave[currentWave.length - 1] && currentWave[currentWave.length - 1] !== '.') return { name: signal.name, wave: signal.wave + signal.wave, width: signal.width, data: signal.data + ' ' + signal.data };
+            else {
               var newWave = '';
-              var j = currentWave.length-1;
-              while(j >= 0 && currentWave[j] === '.') j--;
-              
-              if(currentWave[0] === currentWave[j]) 
-              {
+              var j = currentWave.length - 1;
+              while (j >= 0 && currentWave[j] === '.') j--;
+
+              if (currentWave[0] === currentWave[j]) {
                 newWave = '.' + currentWave.substring(1);
-                return {name : signal.name, wave : signal.wave + newWave, width : signal.width, data : signal.data +  ' ' + signal.data};
+                return { name: signal.name, wave: signal.wave + newWave, width: signal.width, data: signal.data + ' ' + signal.data };
               }
-              else return {name : signal.name, wave : signal.wave + currentWave, width : signal.width, data : signal.data +  ' ' + signal.data};
+              else return { name: signal.name, wave: signal.wave + currentWave, width: signal.width, data: signal.data + ' ' + signal.data };
             }
           }
           else return signal;
@@ -88,7 +83,7 @@ function App() {
         SetSignals(updatedSignal);
         setText(signalToLine(updatedSignal));
         setEditorText(signalToLine(updatedSignal));
-        setCanvasConfig(prev => ({...prev, offsetX : GetMaxNameLen(updatedSignal),timeStamp: maxTimeStamp(updatedSignal) + 10 }));
+        setCanvasConfig(prev => ({ ...prev, offsetX: GetMaxNameLen(updatedSignal), timeStamp: maxTimeStamp(updatedSignal) + 10 }));
       }
     }
 
@@ -105,18 +100,18 @@ function App() {
   const handlerAddbutton = () => {
     var randomSignal = '0.';
     //console.log(randomSignal);
-    const newItem = {name : 'Signal_' + signals.length , wave : randomSignal, data : '', width : 1};
+    const newItem = { name: 'Signal_' + signals.length, wave: randomSignal, data: '', width: 1 };
     const updatedSignal = [...signals, newItem];
 
     SetSignals(prev => [...prev, newItem]);
     setText(signalToLine(updatedSignal));
     setEditorText(signalToLine(updatedSignal));
-    setCanvasConfig(prev => ({...prev,offsetX : GetMaxNameLen(updatedSignal), timeStamp: maxTimeStamp(updatedSignal) + 10, signalCount : updatedSignal.length + 1}));
-    
+    setCanvasConfig(prev => ({ ...prev, offsetX: GetMaxNameLen(updatedSignal), timeStamp: maxTimeStamp(updatedSignal) + 10, signalCount: updatedSignal.length + 1 }));
+
     //updates tab information
     const updatedTab = tabs.map((tab, i) => {
-      if(i === selectionTab){
-        return {name : tabs[i].name, signals : updatedSignal};
+      if (i === selectionTab) {
+        return { name: tabs[i].name, signals: updatedSignal };
       }
       else return tab;
     });
@@ -128,54 +123,50 @@ function App() {
     setEditorText(text);
   }
 
-  const handleOpenFile = () =>
-  {
+  const handleOpenFile = () => {
     openJSONFile()
-    .then(data => {
-      console.log(data[0]);
-      setTabs(data);
-      setSelectionTab(0);
-      SetSignals(data[0].signals);
-      setSelectionIndex(0);
-      setEditorText(signalToLine(data[0].signals));
-    })
-    .catch(err => {
-      alert(err.message);
-    });
+      .then(data => {
+        console.log(data[0]);
+        setTabs(data);
+        setSelectionTab(0);
+        SetSignals(data[0].signals);
+        setSelectionIndex(0);
+        setEditorText(signalToLine(data[0].signals));
+      })
+      .catch(err => {
+        alert(err.message);
+      });
   }
 
-  const handleSaveFile = () =>
-  {
+  const handleSaveFile = () => {
     saveJSONFile(tabs, "signal.json");
   }
 
-  const handleSaveSVG = () =>
-  {
-    combineAndSaveSVG(document.getElementById("mainLayer"), 
-                      document.getElementById("grid"), 
-                      document.getElementById("nameList"), 
-                      canvasConfig.offsetX, tabs[selectionTab].name);
+  const handleSaveSVG = () => {
+    combineAndSaveSVG(document.getElementById("mainLayer"),
+      document.getElementById("grid"),
+      document.getElementById("nameList"),
+      canvasConfig.offsetX, tabs[selectionTab].name);
   }
 
-  const handlerSignalCodeInput = (newText) =>
-  {
+  const handlerSignalCodeInput = (newText) => {
     setEditorText(newText); // Update textarea immediately
 
     try {
       const jsonObj = lineToSignal(newText); // convert to JSON array
       SetSignals(jsonObj); // Only if valid
       setText(signalToLine(signals));
-      setCanvasConfig(prev => ({...prev,offsetX : GetMaxNameLen(jsonObj), timeStamp: maxTimeStamp(jsonObj) + 10, signalCount : jsonObj.length}));
-      
+      setCanvasConfig(prev => ({ ...prev, offsetX: GetMaxNameLen(jsonObj), timeStamp: maxTimeStamp(jsonObj) + 10, signalCount: jsonObj.length }));
+
       //update tab information
       const updatedTab = tabs.map((tab, i) => {
-      if(i === selectionTab){
-        return {name : tabs[i].name, signals : jsonObj};
-      }
-      else return tab;
-    });
-    setTabs(updatedTab);
-      
+        if (i === selectionTab) {
+          return { name: tabs[i].name, signals: jsonObj };
+        }
+        else return tab;
+      });
+      setTabs(updatedTab);
+
       setError(null);
     } catch (e) {
       console.log("Invalid format");
@@ -184,14 +175,13 @@ function App() {
   }
 
   //tab switching handler
-  const handerlTabClick = (e) =>
-  {
+  const handerlTabClick = (e) => {
     //we push current data to the current tab
     //and then load data from the next tab
 
     const updatedTab = tabs.map((tab, i) => {
-      if(i === selectionTab){
-        return {name : tabs[i].name, signals : signals};
+      if (i === selectionTab) {
+        return { name: tabs[i].name, signals: signals };
       }
       else return tab;
     });
@@ -202,11 +192,10 @@ function App() {
     setSelectionTab(e);
     SetSignals(tabs[e].signals);
     setEditorText(signalToLine(tabs[e].signals));
-    setCanvasConfig(prev => ({...prev,offsetX : GetMaxNameLen(tabs[e].signals), timeStamp: maxTimeStamp(tabs[e].signals) + 10, signalCount : tabs[e].signals.length + 1}));
+    setCanvasConfig(prev => ({ ...prev, offsetX: GetMaxNameLen(tabs[e].signals), timeStamp: maxTimeStamp(tabs[e].signals) + 10, signalCount: tabs[e].signals.length + 1 }));
   }
 
-  const handlerTabNameChange = (index, newName) =>
-  {
+  const handlerTabNameChange = (index, newName) => {
     setTabs(prevTabs =>
       prevTabs.map((tab, i) =>
         i === index ? { ...tab, name: newName } : tab
@@ -216,89 +205,81 @@ function App() {
 
   const handlerAddTab = (e) => {
 
-    const newTab = {name : "tab " + tabs.length, signals : []};
+    const newTab = { name: "tab " + tabs.length, signals: [] };
     setSelectionIndex(0);
     setTabs(prev => [...prev, newTab]);
   }
 
   //Mouse control
   //Handle mouse down on main canvas
-  const handlerMouseDownMain = (e) =>
-  {
+  const handlerMouseDownMain = (e) => {
     console.log("mouse down at " + e.x + " " + e.y);
     //getting the first mouse click
     var newMousePos = [...prevMousePos];
     newMousePos[0] = e.x;
     newMousePos[1] = e.y;
     setPrevMousePos(newMousePos);
-    if(e.y < canvasConfig.signalCount)setIsDraggin(true);
+    if (e.y < canvasConfig.signalCount) setIsDraggin(true);
   };
 
   //mouse move
-  const handlerMouseMoveMain = (e) =>
-  {
+  const handlerMouseMoveMain = (e) => {
     var newMousePos = [...mousePos];
     newMousePos[0] = e.x;
     newMousePos[1] = e.y;
     //we only update if there is a change
-    if(newMousePos[0] !== mousePos[0] || newMousePos[1] !== mousePos[1])setMousePos(newMousePos);
+    if (newMousePos[0] !== mousePos[0] || newMousePos[1] !== mousePos[1]) setMousePos(newMousePos);
   }
 
 
   //mouse up
-  const handlerMouseUpMain = (e) =>
-  {
-    if(e.y >= signals.length)return;
-    if (Object.keys(signals[e.y]).includes('space'))return;
+  const handlerMouseUpMain = (e) => {
+    if (e.y >= signals.length) return;
+    if (Object.keys(signals[e.y]).includes('space')) return;
     console.log("Mouse up");
     var updatedSignal = signals[e.y];
-    setSelectionIndex(e.y); 
+    setSelectionIndex(e.y);
     const distance = Math.sqrt(Math.pow(e.x - prevMousePos[0], 2) + Math.pow(e.y - prevMousePos[1], 2));
     //if the distance is close enough, no practical draggin is happening
-    if(distance >= 1)
-    {
+    if (distance >= 1) {
       const x = e.x;
       const y = e.y;
       const x1 = prevMousePos[0];
       //update signal
-      if(y < canvasConfig.signalCount){
+      if (y < canvasConfig.signalCount) {
         updatedSignal = signals.map((signal, i) => {
-          if(i === y){
-            
+          if (i === y) {
+
             //strech signal
-            if(Math.max(x, x1) > signal.wave.length)
-            {
+            if (Math.max(x, x1) > signal.wave.length) {
               let prevwave = signal.wave;
               let sig = signal.wave.split('');
               //sig = sig + sig[sig.length-1].reapeat(x - sig.length);
-              return {name : signal.name, wave : prevwave + '.'.repeat(x-sig.length+1), width : signal.width, data : signal.data};
+              return { name: signal.name, wave: prevwave + '.'.repeat(x - sig.length + 1), width: signal.width, data: signal.data };
             }
 
             //else toggle signal
-            else 
-            {
+            else {
               let chars = signal.wave.split('');
-              const minx = Math.min(x ,x1);
+              const minx = Math.min(x, x1);
               const maxX = Math.max(x, x1);
               var lastState = 'x';
               i = minx;
               //get the last state
-              while(i >= 0)
-              {
-                if(chars[i] !== '.')
-                {
+              while (i >= 0) {
+                if (chars[i] !== '.') {
                   lastState = chars[i];
                   break;
                 }
                 i--;
               }
 
-              for(var j = minx+1; j <= maxX;j++){
-                if(chars[j] !== '.')lastState = chars[j];
+              for (var j = minx + 1; j <= maxX; j++) {
+                if (chars[j] !== '.') lastState = chars[j];
                 chars[j] = '.';
               }
-              if(maxX+1 < chars.length)chars[maxX+1] = chars[maxX+1] === lastState ? '.' : (chars[maxX+1] === '.' ? lastState : chars[maxX]) ;
-              return {name : signal.name, wave : chars.join(''), width : signal.width, data : signal.data};
+              if (maxX + 1 < chars.length) chars[maxX + 1] = chars[maxX + 1] === lastState ? '.' : (chars[maxX + 1] === '.' ? lastState : chars[maxX]);
+              return { name: signal.name, wave: chars.join(''), width: signal.width, data: signal.data };
             }
           }
           else return signal;
@@ -306,91 +287,85 @@ function App() {
         SetSignals(updatedSignal);
       }
     }
-    else 
-    {
+    else {
       const x = e.x;
       const y = e.y;
       //update signal
-      if(y < canvasConfig.signalCount){
+      if (y < canvasConfig.signalCount) {
         updatedSignal = signals.map((signal, i) => {
-          if(i === y){
-            
+          if (i === y) {
+
             //strech signal
-            if(x >= signal.wave.length)
-            {
+            if (x >= signal.wave.length) {
               let prevwave = signal.wave;
               let sig = signal.wave.split('');
               //sig = sig + sig[sig.length-1].reapeat(x - sig.length);
-              return {name : signal.name, wave : prevwave + '.'.repeat(x-sig.length+1), width : signal.width, data : signal.data};
+              return { name: signal.name, wave: prevwave + '.'.repeat(x - sig.length + 1), width: signal.width, data: signal.data };
             }
 
             //else toggle signal
-            else
-            {
+            else {
               let chars = signal.wave.split('');
               var last = 'x';
               var next = 'x';
               var curr = chars[x];
-              i = x-1;
+              i = x - 1;
               //get the last state
-              while(i >= 0)
-              {
-                if(chars[i] !== '.')
-                {
+              while (i >= 0) {
+                if (chars[i] !== '.') {
                   last = chars[i];
                   break;
                 }
                 i--;
               }
               curr = chars[x] === '.' ? last : chars[x];
-              next = x+1 < chars.length ? (chars[x+1] === '.' ? curr : chars[x+1]): 'x';
-              switch (last + curr + next)
-              {
-                case '000' : 
+              next = x + 1 < chars.length ? (chars[x + 1] === '.' ? curr : chars[x + 1]) : 'x';
+              switch (last + curr + next) {
+                case '000':
                   chars[x] = '1';
-                  chars[x+1] = '0';
+                  chars[x + 1] = '0';
                   break;
 
-                case '001' : 
+                case '001':
                   chars[x] = '1';
-                  chars[x+1] = '.';
+                  chars[x + 1] = '.';
                   break;
 
-                case '010' : 
+                case '010':
                   chars[x] = '.';
-                  chars[x+1] = '.';
+                  chars[x + 1] = '.';
                   break;
 
-                case '011' : 
+                case '011':
                   chars[x] = '.';
-                  chars[x+1] = '1';
+                  chars[x + 1] = '1';
                   break;
 
-                case '100' : 
+                case '100':
                   chars[x] = '.';
-                  chars[x+1] = '0';
+                  chars[x + 1] = '0';
                   break;
 
-                case '101' : 
+                case '101':
                   chars[x] = '.';
-                  chars[x+1] = '.';
+                  chars[x + 1] = '.';
                   break;
 
-                case '110' : 
+                case '110':
                   chars[x] = '0';
-                  chars[x+1] = '.';
+                  chars[x + 1] = '.';
                   break;
 
-                case '111' : 
+                case '111':
                   chars[x] = '0';
-                  chars[x+1] = '1';
+                  chars[x + 1] = '1';
                   break;
 
-                default :
-                  
+                default:
+
                   break;
               }
-              return {name : signal.name, wave : chars.join(''), width : signal.width, data : signal.data};
+              return { name: signal.name, wave: chars.join(''), width: signal.width, data: signal.data };
             }
           }
           else return signal;
@@ -401,12 +376,12 @@ function App() {
     setIsDraggin(false);
     setText(signalToLine(updatedSignal));
     setEditorText(signalToLine(updatedSignal));
-    setCanvasConfig(prev => ({...prev,offsetX : GetMaxNameLen(updatedSignal), timeStamp: maxTimeStamp(updatedSignal) + 10 }));
+    setCanvasConfig(prev => ({ ...prev, offsetX: GetMaxNameLen(updatedSignal), timeStamp: maxTimeStamp(updatedSignal) + 10 }));
 
     //update tab
     const updatedTab = tabs.map((tab, i) => {
-      if(i === selectionTab){
-        return {name : tabs[i].name, signals : updatedSignal};
+      if (i === selectionTab) {
+        return { name: tabs[i].name, signals: updatedSignal };
       }
       else return tab;
     });
@@ -428,90 +403,91 @@ function App() {
 
           {/* Signal renderer canvas */}
           <div id="canvas-wrapper" style={{ display: 'flex', position: 'relative' }}>
-  
-  {/* Fixed signal names column on the left */}
-  <SignalNameDiv
-    style={{
-      position: 'sticky',  // ← important for fixed effect
-      top: 0,
-      left: 0,
-      zIndex: 3,
-      background: 'white'  // optional: avoid overlap/transparent text
-    }}
-    signals={signals}
-    dy={canvasConfig.dy}
-    offsetX={canvasConfig.offsetX}
-    offsetY={canvasConfig.offsetY}
-    signalCount={canvasConfig.signalCount}
-    selectionIndex={selectionIndex}
-    Click={(id) => setSelectionIndex(id)}
-  />
 
-  {/* Scrollable canvas area */}
-  <div
-    style={{
-      overflow: 'auto',
-      width: '100%',
-      height:
-        canvasConfig.signalCount * (canvasConfig.dy + canvasConfig.offsetY) +
-        100,
-      position: 'relative'
-    }}
-  >
-    <div
-      style={{
-        width: canvasConfig.timeStamp * canvasConfig.dx + 100,
-        height: '100%',
-        position: 'relative'
-      }}
-    >
-      <Grid
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: canvasConfig.offsetX,
-          zIndex: 1
-        }}
-        dx={canvasConfig.dx}
-        dy={canvasConfig.dy}
-        mouse={mousePos}
-        prevMouse={prevMousePos}
-        dragging={isDragging}
-        offsetX={canvasConfig.offsetX}
-        offsetY={canvasConfig.offsetY}
-        timeStamp={canvasConfig.timeStamp}
-        signalCount={canvasConfig.signalCount}
-      />
+            {/* Fixed signal names column on the left */}
+            <SignalNameDiv
+              style={{
+                position: 'sticky',  // ← important for fixed effect
+                top: 0,
+                left: 0,
+                zIndex: 3,
+                background: 'white'  // optional: avoid overlap/transparent text
+              }}
+              signals={signals}
+              dy={canvasConfig.dy}
+              offsetX={canvasConfig.offsetX}
+              offsetY={canvasConfig.offsetY}
+              signalCount={canvasConfig.signalCount}
+              selectionIndex={selectionIndex}
+              Click={(id) => setSelectionIndex(id)}
+            />
 
-      <SignalWindow
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: canvasConfig.offsetX,
-          zIndex: 2
-        }}
-        signals={signals}
-        dx={canvasConfig.dx}
-        dy={canvasConfig.dy}
-        offsetX={canvasConfig.offsetX}
-        offsetY={canvasConfig.offsetY}
-        timeStamp={canvasConfig.timeStamp}
-        signalCount={canvasConfig.signalCount}
-        onDown={handlerMouseDownMain}
-        onMove={handlerMouseMoveMain}
-        onUp={handlerMouseUpMain}
-      />
-    </div>
-  </div>
-</div>
+            {/* Scrollable canvas area */}
+            <div
+              style={{
+                overflow: 'auto',
+                width: '100%',
+                height:
+                  canvasConfig.signalCount * (canvasConfig.dy + canvasConfig.offsetY) +
+                  100,
+                position: 'relative'
+              }}
+            >
+              <div
+                style={{
+                  width: canvasConfig.timeStamp * canvasConfig.dx + 100,
+                  height: '100%',
+                  position: 'relative'
+                }}
+              >
+                <Grid
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: canvasConfig.offsetX,
+                    zIndex: 1
+                  }}
+                  dx={canvasConfig.dx}
+                  dy={canvasConfig.dy}
+                  mouse={mousePos}
+                  prevMouse={prevMousePos}
+                  dragging={isDragging}
+                  offsetX={canvasConfig.offsetX}
+                  offsetY={canvasConfig.offsetY}
+                  timeStamp={canvasConfig.timeStamp}
+                  signalCount={canvasConfig.signalCount}
+                />
+
+                <SignalWindow
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: canvasConfig.offsetX,
+                    zIndex: 2
+                  }}
+                  signals={signals}
+                  dx={canvasConfig.dx}
+                  dy={canvasConfig.dy}
+                  offsetX={canvasConfig.offsetX}
+                  offsetY={canvasConfig.offsetY}
+                  timeStamp={canvasConfig.timeStamp}
+                  signalCount={canvasConfig.signalCount}
+                  onDown={handlerMouseDownMain}
+                  onMove={handlerMouseMoveMain}
+                  onUp={handlerMouseUpMain}
+                />
+              </div>
+            </div>
+          </div>
 
         </div>
-        
+
         {/* UI elements holder */}
         <div id="ui-panel">
+          <CollapsibleTab></CollapsibleTab>
           <div className='control-group'>
             <svg height="20" width="15">
-              <rect x="0" y="0" height="10" width="15" fill={error === null ? "green" : "red"}  strokeWidth="1"/>
+              <rect x="0" y="0" height="10" width="15" fill={error === null ? "green" : "red"} strokeWidth="1" />
             </svg>
             <button className='button-5' onClick={handlerAddbutton}> Add new </button>
             <button className='button-5' onClick={handleCodeFormat}>Auto-format</button>
@@ -520,11 +496,13 @@ function App() {
             <button className='button-5' onClick={handleOpenFile}>Open file</button>
           </div>
           <div className='control-group'>
-            {(<textarea spellCheck={false} className='textarea' rows={10} cols={100} value={editorText} onChange={(e) => handlerSignalCodeInput(e.target.value)}></textarea>)}
+            {(<textarea spellCheck={false} className='textarea' rows={10} cols={98} value={editorText} onChange={(e) => handlerSignalCodeInput(e.target.value)}></textarea>)}
           </div>
+
         </div>
         {/* Tab panel */}
-        <TabBar tabs={tabs} selectionIndex={selectionTab} onAddDown={handlerAddTab} onSave={handlerTabNameChange} onClick={handerlTabClick}/>
+        
+        <TabBar tabs={tabs} selectionIndex={selectionTab} onAddDown={handlerAddTab} onSave={handlerTabNameChange} onClick={handerlTabClick} />
 
       </div>
     </div>
@@ -621,8 +599,7 @@ function signalToLine(list) {
 
 
 
-function maxTimeStamp(signals)
-{
+function maxTimeStamp(signals) {
   var maxLen = 0;
   signals.forEach(element => {
     const len = !Object.keys(element).includes('space') ? element.wave.length : 0;
@@ -633,17 +610,15 @@ function maxTimeStamp(signals)
 }
 
 //returns the maximum length 
-function GetMaxNameLen(signals)
-{
+function GetMaxNameLen(signals) {
   var maxNameLen = 0;
   signals.forEach(element => {
-    if(Object.keys(element).includes("name"))
-    {
+    if (Object.keys(element).includes("name")) {
       const len = element.name.length;
       maxNameLen = len > maxNameLen ? len : maxNameLen;
     }
   });
-  return maxNameLen*9 + 22;
+  return maxNameLen * 9 + 22;
 }
 
 function saveJSONFile(data, filename = "data.json") {
