@@ -364,29 +364,84 @@ function App() {
         <div id="output-panel">
 
           {/* Signal renderer canvas */}
-          <div id="canvas-wrapper">
-            {/* Signal names div*/}
-            <SignalNameDiv 
-              style={{ position: "sticky", top: 0, left: 0, zIndex: 3}} 
-              signals={signals} 
-              dy = {canvasConfig.dy}
-              offsetX={canvasConfig.offsetX}
-              offsetY={canvasConfig.offsetY}
-              signalCount={canvasConfig.signalCount}
-              selectionIndex={selectionIndex} 
-              Click={(id) => {setSelectionIndex(id)}} 
-            />
-            <div style={{ overflow:'auto', width: canvasConfig.timeStamp * canvasConfig.dx + 100, height: canvasConfig.signalCount * (canvasConfig.dy + canvasConfig.offsetY) + 100, position: 'relative' }}>
-              <Grid
-                style={{ position: "absolute", top: 0, left: canvasConfig.offsetX, zIndex: 1 }} 
-                dx={canvasConfig.dx} dy={canvasConfig.dy} mouse={mousePos} prevMouse={prevMousePos} dragging={isDragging} offsetX={canvasConfig.offsetX} offsetY={canvasConfig.offsetY}timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount}
-              />
-              <SignalWindow
-                style={{ position: "absolute", top: 0, left: canvasConfig.offsetX, zIndex: 2 }}
-                signals={signals} dx={canvasConfig.dx} dy={canvasConfig.dy} offsetX={canvasConfig.offsetX} offsetY={canvasConfig.offsetY} timeStamp={canvasConfig.timeStamp} signalCount={canvasConfig.signalCount} onDown={handlerMouseDownMain} onMove={(e) => {handlerMouseMoveMain(e)}} onUp={(e) => {handlerMouseUpMain(e)}}
-              />
-            </div>
-          </div>
+          <div id="canvas-wrapper" style={{ display: 'flex', position: 'relative' }}>
+  
+  {/* Fixed signal names column on the left */}
+  <SignalNameDiv
+    style={{
+      position: 'sticky',  // ← important for fixed effect
+      top: 0,
+      left: 0,
+      zIndex: 3,
+      background: 'white'  // optional: avoid overlap/transparent text
+    }}
+    signals={signals}
+    dy={canvasConfig.dy}
+    offsetX={canvasConfig.offsetX}
+    offsetY={canvasConfig.offsetY}
+    signalCount={canvasConfig.signalCount}
+    selectionIndex={selectionIndex}
+    Click={(id) => setSelectionIndex(id)}
+  />
+
+  {/* Scrollable canvas area */}
+  <div
+    style={{
+      overflow: 'auto',
+      width: '100%',
+      height:
+        canvasConfig.signalCount * (canvasConfig.dy + canvasConfig.offsetY) +
+        100,
+      position: 'relative'
+    }}
+  >
+    <div
+      style={{
+        width: canvasConfig.timeStamp * canvasConfig.dx + 100,
+        height: '100%',
+        position: 'relative'
+      }}
+    >
+      <Grid
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: canvasConfig.offsetX,
+          zIndex: 1
+        }}
+        dx={canvasConfig.dx}
+        dy={canvasConfig.dy}
+        mouse={mousePos}
+        prevMouse={prevMousePos}
+        dragging={isDragging}
+        offsetX={canvasConfig.offsetX}
+        offsetY={canvasConfig.offsetY}
+        timeStamp={canvasConfig.timeStamp}
+        signalCount={canvasConfig.signalCount}
+      />
+
+      <SignalWindow
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: canvasConfig.offsetX,
+          zIndex: 2
+        }}
+        signals={signals}
+        dx={canvasConfig.dx}
+        dy={canvasConfig.dy}
+        offsetX={canvasConfig.offsetX}
+        offsetY={canvasConfig.offsetY}
+        timeStamp={canvasConfig.timeStamp}
+        signalCount={canvasConfig.signalCount}
+        onDown={handlerMouseDownMain}
+        onMove={handlerMouseMoveMain}
+        onUp={handlerMouseUpMain}
+      />
+    </div>
+  </div>
+</div>
+
         </div>
         
         {/* UI elements holder */}
@@ -470,8 +525,7 @@ function signalToLine(list) {
   return list
     .map(signal => {
       if ('space' in signal) {
-        const numSpaces = parseInt(signal.space, 10) || 1;
-        return '\n'.repeat(numSpaces); // one or more empty lines
+        return '\n'; // one or more empty lines
       }
 
       return keys
