@@ -181,6 +181,23 @@ html, body {
     border: none;
   }
 
+  .button-4
+  {
+    background-color: #2f3338;
+    border: 0px;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 15px;
+    text-align: center;
+  }
+
+  .button-4:hover{
+    font-weight: bolder;
+  }
+
   .button-5
   {
     background-color: #2f3338;

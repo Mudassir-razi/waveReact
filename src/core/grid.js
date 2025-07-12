@@ -39,6 +39,7 @@ export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetX, offse
         >
             {gridLines}
             <line
+                id='selectionLine1'
                 x1={(dragging ? prevMouse[0] * dx : mouse[0] * dx) + 0.5}
                 y1={0.5}
                 x2={(dragging ? prevMouse[0] * dx : mouse[0] * dx) + 0.5}
@@ -49,6 +50,7 @@ export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetX, offse
                 pointerEvents="none" // does not block mouse events
             />
             <line
+                id='selectionLine2'
                 x1={(mouse[0]+1) * dx + 0.5}
                 y1={0.5}
                 x2={(mouse[0]+1) * dx + 0.5}
@@ -60,6 +62,7 @@ export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetX, offse
             />
 
             <rect
+                id='selectionRect'
                 x={0}
                 y={mouse[1] * (dy + offsetY)}
                 width={timeStamp * dx}

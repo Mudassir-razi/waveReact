@@ -47,6 +47,7 @@ function App() {
   const[prevMousePos, setPrevMousePos] = useState([0,0]);
   const[isDragging, setIsDraggin] = useState(false);
   
+
   useEffect(() => {
     setText(signalToLine(signals));
     
@@ -111,6 +112,15 @@ function App() {
     setText(signalToLine(updatedSignal));
     setEditorText(signalToLine(updatedSignal));
     setCanvasConfig(prev => ({...prev,offsetX : GetMaxNameLen(updatedSignal), timeStamp: maxTimeStamp(updatedSignal) + 10, signalCount : updatedSignal.length + 1}));
+    
+    //updates tab information
+    const updatedTab = tabs.map((tab, i) => {
+      if(i === selectionTab){
+        return {name : tabs[i].name, signals : updatedSignal};
+      }
+      else return tab;
+    });
+    setTabs(updatedTab);
   };
 
   const handleCodeFormat = () => {
@@ -156,6 +166,16 @@ function App() {
       SetSignals(jsonObj); // Only if valid
       setText(signalToLine(signals));
       setCanvasConfig(prev => ({...prev,offsetX : GetMaxNameLen(jsonObj), timeStamp: maxTimeStamp(jsonObj) + 10, signalCount : jsonObj.length}));
+      
+      //update tab information
+      const updatedTab = tabs.map((tab, i) => {
+      if(i === selectionTab){
+        return {name : tabs[i].name, signals : jsonObj};
+      }
+      else return tab;
+    });
+    setTabs(updatedTab);
+      
       setError(null);
     } catch (e) {
       console.log("Invalid format");
@@ -382,6 +402,15 @@ function App() {
     setText(signalToLine(updatedSignal));
     setEditorText(signalToLine(updatedSignal));
     setCanvasConfig(prev => ({...prev,offsetX : GetMaxNameLen(updatedSignal), timeStamp: maxTimeStamp(updatedSignal) + 10 }));
+
+    //update tab
+    const updatedTab = tabs.map((tab, i) => {
+      if(i === selectionTab){
+        return {name : tabs[i].name, signals : updatedSignal};
+      }
+      else return tab;
+    });
+    setTabs(updatedTab);
   }
 
   //.................................MAIN HTML RETURN.........................................
@@ -665,46 +694,77 @@ function openJSONFile() {
   });
 }
 
-function combineAndSaveSVG(svg1, svg2, svg3, offsetX, filename = 'combined.svg') {
-  // Create a wrapper SVG
-  const combinedSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  combinedSVG.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  combinedSVG.setAttribute('version', '1.1');
+function combineAndSaveSVG(signalSvg, gridSvg, nameSvg, filename = 'combined.svg') {
+  const SVG_NS = 'http://www.w3.org/2000/svg';
 
-  // Optional: set viewBox or width/height based on content
-  combinedSVG.setAttribute('width', svg1.getAttribute('width') + svg3.getAttribute('width'));  // customize as needed
-  combinedSVG.setAttribute('height', svg1.getAttribute('height'));
+  // Extract widths and height
+  const nameWidth = parseFloat(nameSvg.getAttribute('width') || 0);
+  const signalWidth = parseFloat(signalSvg.getAttribute('width') || 0);
+  const gridHeight = parseFloat(gridSvg.getAttribute('height') || 0);
+  const totalWidth = nameWidth + signalWidth;
+
+  // Create a combined SVG
+  const combinedSVG = document.createElementNS(SVG_NS, 'svg');
+  combinedSVG.setAttribute('xmlns', SVG_NS);
+  combinedSVG.setAttribute('width', totalWidth);
+  combinedSVG.setAttribute('height', gridHeight);
+  combinedSVG.setAttribute('viewBox', `0 0 ${totalWidth} ${gridHeight}`);
+
+  // Helper: clone and translate group
+  function cloneGroup(sourceSvg, offsetX = 0) {
+    const g = document.createElementNS(SVG_NS, 'g');
+
+    if (offsetX !== 0) {
+      g.setAttribute('transform', `translate(${offsetX}, 0)`);
+    }
+
+    // Copy children
+    Array.from(sourceSvg.childNodes).forEach(node => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        g.appendChild(node.cloneNode(true));
+      }
+    });
+
+    return g;
+  }
+
+  // Step 1: grid (shifted right)
+  const gridGroup = cloneGroup(gridSvg, nameWidth);
+  removeSvgChildrenById(gridGroup, ['selectionRect', 'selectionLine1', 'selectionLine2']);
+  // Step 2: signal (shifted right)
+  const signalGroup = cloneGroup(signalSvg, nameWidth);
+
+  // Step 3: name (at x = 0)
+  const nameGroup = cloneGroup(nameSvg, 0);
+  nameGroup.setAttribute("font-family", "monospace");
+  nameGroup.setAttribute("font-weight", "bold");
+
+  // Append layers in back-to-front order
+  combinedSVG.appendChild(gridGroup);   // back
+  combinedSVG.appendChild(signalGroup); // middle
+  combinedSVG.appendChild(nameGroup);   // front
 
 
-  // Import and append the second SVG with an offset
-
-  // Import and append the first SVG
-  const imported1 = document.importNode(svg2, true);
-  imported1.setAttribute('x', offsetX);
-  imported1.setAttribute('y', '0');
-  combinedSVG.appendChild(imported1);
-
-  // Import and append the second SVG with an offset
-  const imported2 = document.importNode(svg1, true);
-  imported2.setAttribute('x', offsetX); // change to offset them
-  imported2.setAttribute('y', '0');
-  combinedSVG.appendChild(imported2);
-  
-  
-  const imported0 = document.importNode(svg2, true);
-  imported0.setAttribute('x', '0'); // change to offset them
-  imported0.setAttribute('y', '0');
-  combinedSVG.appendChild(imported0);
-
-  // Serialize the combined SVG
+  // Serialize and download
   const serializer = new XMLSerializer();
-  const svgBlob = new Blob([serializer.serializeToString(combinedSVG)], { type: 'image/svg+xml' });
+  const svgString = serializer.serializeToString(combinedSVG);
+  const blob = new Blob([svgString], { type: 'image/svg+xml' });
 
-  // Trigger file download
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(svgBlob);
+  a.href = url;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function removeSvgChildrenById(svgElement, idsToRemove) {
+  idsToRemove.forEach(id => {
+    const element = svgElement.querySelector(`#${id}`);
+    if (element) {
+      element.remove(); // Remove the element from the DOM
+    }
+  });
 }
