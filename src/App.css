@@ -206,32 +206,6 @@ html, body {
     font-size: 10px;
   }
 
-  .button-6 {
-    background-color: #2f3338;
-    display: flex;
-    border: 0px;
-    align-items: center;
-    justify-content: center;
-    color: #ffffff;
-    cursor: pointer;
-    font-family: arial,sans-serif;
-    font-size: 24px;
-    width: 100%;
-    height: 26px;
-    text-align: center;
-  }
-  
-  .button-6:hover {
-    box-shadow: rgba(0, 0, 0, 0.1) 3px 3px 5px;
-    background-color: #252525;
-    font-size: 26px;
-  }
-  
-  .button-6:focus {
-    border-color: #4285f4;
-    outline: none;
-  }
-
   .tab-bar{
     padding-left: 2%;
     display: flex;

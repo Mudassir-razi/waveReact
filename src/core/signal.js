@@ -188,7 +188,7 @@ function renderSignal(ctx, name, wave, data, idx, dx, dy, offsetY, lineWidth)
         }
         const t1 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
         t1.setAttribute("x", i*dx + dx*0.70 + busLen*14);
-        t1.setAttribute("y", idx * (dy+offsetY) + 0.90*dy);
+        t1.setAttribute("y", idx * (dy+offsetY) + 1.10*dy);
         t1.textContent = `${dataIndex < data.split(' ').length ? data.split(' ')[dataIndex] : ' '}`;
         texts.push(t1);
         dataIndex++;

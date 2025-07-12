@@ -31,6 +31,7 @@ export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetX, offse
 
     return(
         <svg
+        id="grid"
         ref={BGcanvasRef}
         width={timeStamp * dx} 
         height={signalCount * (dy + offsetY) + 5}

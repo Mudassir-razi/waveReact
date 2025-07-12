@@ -9,6 +9,7 @@ export default function SignalNameDiv({signals, dy, offsetX, offsetY, signalCoun
     return(
 
         <svg 
+        id="nameList"
         width={offsetX} 
         height={(dy+offsetY) * signalCount + 10} 
         style={{ position: "absolute", top: 0, left: 0, zIndex: 3, backgroundColor: "white" }}

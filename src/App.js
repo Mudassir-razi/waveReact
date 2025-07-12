@@ -36,9 +36,6 @@ function App() {
   //Error parsing
   const [error, setError] = useState(null);
 
-  //tab render sequence
-  const [tabRenderSequence, setTabRenderSequence] = useState([0]);
-
   //selected items
   const [selectionIndex, setSelectionIndex] = useState(-1);
 
@@ -121,6 +118,35 @@ function App() {
     setEditorText(text);
   }
 
+  const handleOpenFile = () =>
+  {
+    openJSONFile()
+    .then(data => {
+      console.log(data[0]);
+      setTabs(data);
+      setSelectionTab(0);
+      SetSignals(data[0].signals);
+      setSelectionIndex(0);
+      setEditorText(signalToLine(data[0].signals));
+    })
+    .catch(err => {
+      alert(err.message);
+    });
+  }
+
+  const handleSaveFile = () =>
+  {
+    saveJSONFile(tabs, "signal.json");
+  }
+
+  const handleSaveSVG = () =>
+  {
+    combineAndSaveSVG(document.getElementById("mainLayer"), 
+                      document.getElementById("grid"), 
+                      document.getElementById("nameList"), 
+                      canvasConfig.offsetX, tabs[selectionTab].name);
+  }
+
   const handlerSignalCodeInput = (newText) =>
   {
     setEditorText(newText); // Update textarea immediately
@@ -159,12 +185,20 @@ function App() {
     setCanvasConfig(prev => ({...prev,offsetX : GetMaxNameLen(tabs[e].signals), timeStamp: maxTimeStamp(tabs[e].signals) + 10, signalCount : tabs[e].signals.length + 1}));
   }
 
+  const handlerTabNameChange = (index, newName) =>
+  {
+    setTabs(prevTabs =>
+      prevTabs.map((tab, i) =>
+        i === index ? { ...tab, name: newName } : tab
+      )
+    );
+  }
+
   const handlerAddTab = (e) => {
-    console.log(tabRenderSequence);
+
     const newTab = {name : "tab " + tabs.length, signals : []};
     setSelectionIndex(0);
     setTabs(prev => [...prev, newTab]);
-    setTabRenderSequence(prev => [...prev, tabs.length]);
   }
 
   //Mouse control
@@ -452,13 +486,16 @@ function App() {
             </svg>
             <button className='button-5' onClick={handlerAddbutton}> Add new </button>
             <button className='button-5' onClick={handleCodeFormat}>Auto-format</button>
+            <button className='button-5' onClick={handleSaveFile}>Save file</button>
+            <button className='button-5' onClick={handleSaveSVG}>Save SVG</button>
+            <button className='button-5' onClick={handleOpenFile}>Open file</button>
           </div>
           <div className='control-group'>
             {(<textarea spellCheck={false} className='textarea' rows={10} cols={100} value={editorText} onChange={(e) => handlerSignalCodeInput(e.target.value)}></textarea>)}
           </div>
         </div>
         {/* Tab panel */}
-        <TabBar tabs={tabs} renderSequence={tabRenderSequence} selectionIndex={selectionTab} onAddDown={handlerAddTab} onClick={handerlTabClick}/>
+        <TabBar tabs={tabs} selectionIndex={selectionTab} onAddDown={handlerAddTab} onSave={handlerTabNameChange} onClick={handerlTabClick}/>
 
       </div>
     </div>
@@ -472,32 +509,37 @@ export default App;
 // Convert flat line to JSON
 function lineToSignal(text) {
   const requiredKeys = ["name", "wave"];
-  const lines = text.split("\n"); // Don't trim globally – preserve blank lines
+  const lines = text.split("\n");
 
   return lines.map((line, index) => {
-    if (line.trim() === "") {
-      return { space: "1" };
-    }
+    if (line.trim() === "") return { space: "1" };
 
-    const parts = line.trim().split(/\s{2,}/); // split by 2+ spaces
+    const parts = line.split(",").map(p => p.trim());
     const obj = {};
 
     for (const part of parts) {
       const [key, ...rest] = part.split(":");
-      if (!key || rest.length === 0) throw new Error(`Invalid part: ${part}`);
-      obj[key.trim()] = rest.join(":").trim();
+      if (!key || rest.length === 0) {
+        throw new Error(`Invalid entry on line ${index + 1}: ${part}`);
+      }
+
+      const expression = rest.join(":").trim();
+
+      // Safely evaluate expression (e.g. "abc".repeat(2))
+      try {
+        const fn = new Function(`return (${expression});`);
+        obj[key.trim()] = fn();
+      } catch (e) {
+        throw new Error(`Line ${index + 1}, key "${key.trim()}": invalid expression → ${expression}`);
+      }
     }
 
-    // Validate keys
-    const objKeys = Object.keys(obj);
-    const missingKeys = requiredKeys.filter(k => !(k in obj));
-
-    if (missingKeys.length > 0) {
-      throw new Error(`Line ${index + 1}: Missing keys: ${missingKeys.join(", ")}`);
+    const missing = requiredKeys.filter(k => !(k in obj));
+    if (missing.length > 0) {
+      throw new Error(`Line ${index + 1}: Missing keys: ${missing.join(", ")}`);
     }
 
-    // Optionally cast width to number
-    if (!isNaN(Number(obj.width))) {
+    if ("width" in obj && !isNaN(Number(obj.width))) {
       obj.width = Number(obj.width);
     }
 
@@ -507,37 +549,48 @@ function lineToSignal(text) {
 
 
 
-
 // Convert aligned version
 function signalToLine(list) {
   const keys = ["name", "wave", "data", "width"];
-  const maxKeyLengths = {};
 
-  // Calculate max lengths only for signal entries (ignore space-only entries)
+  // Step 1: determine max lengths of key and value for each key
+  const maxKeyLengths = {};
+  const maxValueLengths = {};
+
   for (const key of keys) {
-    maxKeyLengths[key] = Math.max(
-      ...list
-        .filter(item => item[key] !== undefined)
-        .map(s => `${key}: ${s[key]}`.length)
-    );
+    maxKeyLengths[key] = key.length;
+    maxValueLengths[key] = 0;
   }
 
-  return list
-    .map(signal => {
-      if ('space' in signal) {
-        return '\n'; // one or more empty lines
-      }
+  for (const item of list) {
+    if ('space' in item) continue;
 
-      return keys
-        .map(key => {
-          const value = signal[key] ?? "";
-          const field = `${key}: ${value}`;
-          return field.padEnd(maxKeyLengths[key] + 4); // 4 spaces after each field
-        })
-        .join("");
-    })
-    .join("\n");
+    for (const key of keys) {
+      if (key in item) {
+        const valueStr = JSON.stringify(item[key]);
+        maxValueLengths[key] = Math.max(maxValueLengths[key], valueStr.length);
+      }
+    }
+  }
+
+  // Step 2: format each line with aligned key: value
+  return list.map(signal => {
+    if ('space' in signal) return "";
+
+    const line = keys
+      .filter(key => key in signal)
+      .map(key => {
+        const paddedKey = key.padEnd(maxKeyLengths[key]);
+        const valueStr = JSON.stringify(signal[key]).padEnd(maxValueLengths[key]);
+        return `${paddedKey} : ${valueStr}`;
+      })
+      .join(",  ");
+
+    return line;
+  }).join("\n");
 }
+
+
 
 function maxTimeStamp(signals)
 {
@@ -562,4 +615,96 @@ function GetMaxNameLen(signals)
     }
   });
   return maxNameLen*9 + 22;
+}
+
+function saveJSONFile(data, filename = "data.json") {
+  const json = JSON.stringify(data, null, 2); // pretty-print with 2-space indent
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+
+  URL.revokeObjectURL(url); // cleanup
+}
+
+function openJSONFile() {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.style.display = "none";
+
+    input.onchange = async (event) => {
+      const file = event.target.files[0];
+      if (!file) {
+        reject(new Error("No file selected"));
+        return;
+      }
+
+      try {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        resolve(json);
+      } catch (err) {
+        reject(new Error("Invalid JSON file"));
+      } finally {
+        document.body.removeChild(input);
+      }
+    };
+
+    input.onerror = () => {
+      reject(new Error("File input error"));
+      document.body.removeChild(input);
+    };
+
+    document.body.appendChild(input);
+    input.click();
+  });
+}
+
+function combineAndSaveSVG(svg1, svg2, svg3, offsetX, filename = 'combined.svg') {
+  // Create a wrapper SVG
+  const combinedSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  combinedSVG.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  combinedSVG.setAttribute('version', '1.1');
+
+  // Optional: set viewBox or width/height based on content
+  combinedSVG.setAttribute('width', svg1.getAttribute('width') + svg3.getAttribute('width'));  // customize as needed
+  combinedSVG.setAttribute('height', svg1.getAttribute('height'));
+
+
+  // Import and append the second SVG with an offset
+
+  // Import and append the first SVG
+  const imported1 = document.importNode(svg2, true);
+  imported1.setAttribute('x', offsetX);
+  imported1.setAttribute('y', '0');
+  combinedSVG.appendChild(imported1);
+
+  // Import and append the second SVG with an offset
+  const imported2 = document.importNode(svg1, true);
+  imported2.setAttribute('x', offsetX); // change to offset them
+  imported2.setAttribute('y', '0');
+  combinedSVG.appendChild(imported2);
+  
+  
+  const imported0 = document.importNode(svg2, true);
+  imported0.setAttribute('x', '0'); // change to offset them
+  imported0.setAttribute('y', '0');
+  combinedSVG.appendChild(imported0);
+
+  // Serialize the combined SVG
+  const serializer = new XMLSerializer();
+  const svgBlob = new Blob([serializer.serializeToString(combinedSVG)], { type: 'image/svg+xml' });
+
+  // Trigger file download
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(svgBlob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }

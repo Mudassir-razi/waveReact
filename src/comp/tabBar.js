@@ -1,14 +1,14 @@
 import { useEffect } from "react";
 import LabelInput from "./labelInput";
 
-export default function TabBar({tabs, renderSequence, selectionIndex, onClick, onAddDown}) {
+export default function TabBar({tabs, selectionIndex, onClick, onSave, onAddDown}) {
 
   return (
     <div className="tab-bar">
-      {renderSequence.map((id, index) =>(
-        <LabelInput key={index} id={id} text={tabs[id].name} selectionIndex={selectionIndex} onClick={() => onClick(id)} normalClass="tab-label" selectClass="tab-label-selected" />
+      {tabs.map((tab, index) =>(
+        <LabelInput key={index} id={index} text={tab.name} selectionIndex={selectionIndex} onClick={() => onClick(index)} onSave={onSave} normalClass="tab-label" selectClass="tab-label-selected" />
       ))}
-      <button id="1209" onClick={() => {onAddDown()}}>+</button>
+      <button style={{ background:"#2f3338", color:"white",border: "0px"}} id="1209" onClick={() => {onAddDown()}}>+</button>
     </div>
   );
 }
