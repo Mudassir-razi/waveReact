@@ -61,15 +61,23 @@ export default function SignalWindow({signals, dx, dy, timeStamp, signalCount, o
   );
 }
 
-
-
-//renders all the signals on the grid
+/**
+ * renders all the signals on the grid
+ * @param {svg} svg_canvas -SVG object to render signals on
+ * @param {JSON} signals -JSON objects containing signals
+ * @param {int} dx - Horizontal spacing between waveform bits
+ * @param {int} dy -Height of the waveform
+ * @param {int} offsetY - Offset between waveforms
+ */
 function renderAllSignals(svg_canvas, signals, dx, dy, offsetY)
 {
     svg_canvas.innerHTML = ''; // Clear previous content
     //console.log("Rendering " + sequence.length + " signals with Settings: dx: " + dx + " dy: " + dy);
     for(var i = 0; i < signals.length; i++){
-        if(Object.keys(signals[i]).includes('space'))continue;
+        if(typeof signals[i] === "object" &&
+            signals[i]  !== null &&
+            Object.keys(signals[i] ).length === 0 &&
+            signals[i].constructor === Object) continue;
         var name = signals[i].name;
         var signal = signals[i].wave;
         var data = signals[i].data;

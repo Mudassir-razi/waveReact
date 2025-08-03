@@ -8,6 +8,7 @@ import SignalNameDiv from './comp/signalNameDivl';
 import TabBar from './comp/tabBar';
 import CollapsibleTab from './comp/CollapsibleTab';
 import {combineAndSaveSVG, openJSONFile, saveJSONFile} from './core/fileSys';
+import { parse2Json, parse2String } from './core/parser';
 
 function App() {
 
@@ -32,8 +33,8 @@ function App() {
   //Signal data
   const [signals, SetSignals] = useState([]);
   //signal text for display
-  const [text, setText] = useState(signalToLine(signals));
-  const [editorText, setEditorText] = useState(signalToLine(signals));
+  const [text, setText] = useState(parse2String(signals));
+  const [editorText, setEditorText] = useState(parse2String(signals));
 
   //Error parsing
   const [error, setError] = useState(null);
@@ -51,7 +52,7 @@ function App() {
 
 
   useEffect(() => {
-    setText(signalToLine(signals));
+    setText(parse2String(signals));
 
   }, [signals]);
 
@@ -82,8 +83,8 @@ function App() {
         });
 
         SetSignals(updatedSignal);
-        setText(signalToLine(updatedSignal));
-        setEditorText(signalToLine(updatedSignal));
+        setText(parse2String(updatedSignal));
+        setEditorText(parse2String(updatedSignal));
         setCanvasConfig(prev => ({ ...prev, offsetX: GetMaxNameLen(updatedSignal), timeStamp: maxTimeStamp(updatedSignal) + 10 }));
       }
     }
@@ -105,8 +106,8 @@ function App() {
     const updatedSignal = [...signals, newItem];
 
     SetSignals(prev => [...prev, newItem]);
-    setText(signalToLine(updatedSignal));
-    setEditorText(signalToLine(updatedSignal));
+    setText(parse2String(updatedSignal));
+    setEditorText(parse2String(updatedSignal));
     setCanvasConfig(prev => ({ ...prev, offsetX: GetMaxNameLen(updatedSignal), timeStamp: maxTimeStamp(updatedSignal) + 10, signalCount: updatedSignal.length + 1 }));
 
     //updates tab information
@@ -132,7 +133,7 @@ function App() {
         setSelectionTab(0);
         SetSignals(data[0].signals);
         setSelectionIndex(0);
-        setEditorText(signalToLine(data[0].signals));
+        setEditorText(parse2String(data[0].signals));
       })
       .catch(err => {
         alert(err.message);
@@ -154,9 +155,9 @@ function App() {
     setEditorText(newText); // Update textarea immediately
 
     try {
-      const jsonObj = lineToSignal(newText); // convert to JSON array
+      const jsonObj = parse2Json(newText) // convert to JSON array
       SetSignals(jsonObj); // Only if valid
-      setText(signalToLine(signals));
+      setText(parse2String(signals));
       setCanvasConfig(prev => ({ ...prev, offsetX: GetMaxNameLen(jsonObj), timeStamp: maxTimeStamp(jsonObj) + 10, signalCount: jsonObj.length }));
 
       //update tab information
@@ -170,7 +171,7 @@ function App() {
 
       setError(null);
     } catch (e) {
-      console.log("Invalid format");
+      console.log(e.message);
       setError("Invalid format");
     }
   }
@@ -192,7 +193,7 @@ function App() {
     setSelectionIndex(0);
     setSelectionTab(e);
     SetSignals(tabs[e].signals);
-    setEditorText(signalToLine(tabs[e].signals));
+    setEditorText(parse2String(tabs[e].signals));
     setCanvasConfig(prev => ({ ...prev, offsetX: GetMaxNameLen(tabs[e].signals), timeStamp: maxTimeStamp(tabs[e].signals) + 10, signalCount: tabs[e].signals.length + 1 }));
   }
 
@@ -235,8 +236,9 @@ function App() {
 
   //mouse up
   const handlerMouseUpMain = (e) => {
+    setIsDraggin(false);
     if (e.y >= signals.length) return;
-    if (Object.keys(signals[e.y]).includes('space')) return;
+    if (IsEmpty(signals[e.y])) return;
     console.log("Mouse up");
     var updatedSignal = signals[e.y];
     setSelectionIndex(e.y);
@@ -374,9 +376,8 @@ function App() {
         SetSignals(updatedSignal);
       }
     }
-    setIsDraggin(false);
-    setText(signalToLine(updatedSignal));
-    setEditorText(signalToLine(updatedSignal));
+    setText(parse2String(updatedSignal));
+    setEditorText(parse2String(updatedSignal));
     setCanvasConfig(prev => ({ ...prev, offsetX: GetMaxNameLen(updatedSignal), timeStamp: maxTimeStamp(updatedSignal) + 10 }));
 
     //update tab
@@ -513,102 +514,32 @@ function App() {
 
 export default App;
 
-
-// Convert flat line to JSON
-function lineToSignal(text) {
-  const requiredKeys = ["name", "wave"];
-  const lines = text.split("\n");
-
-  return lines.map((line, index) => {
-    if (line.trim() === "") return { space: "1" };
-
-    const parts = line.split(",").map(p => p.trim());
-    const obj = {};
-
-    for (const part of parts) {
-      const [key, ...rest] = part.split(":");
-      if (!key || rest.length === 0) {
-        throw new Error(`Invalid entry on line ${index + 1}: ${part}`);
-      }
-
-      const expression = rest.join(":").trim();
-
-      // Safely evaluate expression (e.g. "abc".repeat(2))
-      try {
-        const fn = new Function(`return (${expression});`);
-        obj[key.trim()] = fn();
-      } catch (e) {
-        throw new Error(`Line ${index + 1}, key "${key.trim()}": invalid expression → ${expression}`);
-      }
-    }
-
-    const missing = requiredKeys.filter(k => !(k in obj));
-    if (missing.length > 0) {
-      throw new Error(`Line ${index + 1}: Missing keys: ${missing.join(", ")}`);
-    }
-
-    if ("width" in obj && !isNaN(Number(obj.width))) {
-      obj.width = Number(obj.width);
-    }
-
-    return obj;
-  });
-}
-
-
-
-// Convert aligned version
-function signalToLine(list) {
-  const keys = ["name", "wave", "data", "width"];
-
-  // Step 1: determine max lengths of key and value for each key
-  const maxKeyLengths = {};
-  const maxValueLengths = {};
-
-  for (const key of keys) {
-    maxKeyLengths[key] = key.length;
-    maxValueLengths[key] = 0;
-  }
-
-  for (const item of list) {
-    if ('space' in item) continue;
-
-    for (const key of keys) {
-      if (key in item) {
-        const valueStr = JSON.stringify(item[key]);
-        maxValueLengths[key] = Math.max(maxValueLengths[key], valueStr.length);
-      }
-    }
-  }
-
-  // Step 2: format each line with aligned key: value
-  return list.map(signal => {
-    if ('space' in signal) return "";
-
-    const line = keys
-      .filter(key => key in signal)
-      .map(key => {
-        const paddedKey = key.padEnd(maxKeyLengths[key]);
-        const valueStr = JSON.stringify(signal[key]).padEnd(maxValueLengths[key]);
-        return `${paddedKey} : ${valueStr}`;
-      })
-      .join(",  ");
-
-    return line;
-  }).join("\n");
-}
-
+//Helper functions...............................................
 
 
 function maxTimeStamp(signals) {
-  var maxLen = 0;
-  signals.forEach(element => {
+  let maxLen = 0;
+
+  for (let i = 0; i < signals.length; i++) {
+    const element = signals[i];
+
+    // Skip empty objects
+    if (
+      typeof element !== "object" ||
+      element === null ||
+      Object.keys(element).length === 0 ||
+      element.constructor !== Object
+    ) {
+      continue;
+    }
+
     const len = !Object.keys(element).includes('space') ? element.wave.length : 0;
     maxLen = len > maxLen ? len : maxLen;
-  });
+  }
 
   return maxLen;
 }
+
 
 //returns the maximum length 
 function GetMaxNameLen(signals) {
@@ -622,5 +553,10 @@ function GetMaxNameLen(signals) {
   return maxNameLen * 9 + 22;
 }
 
-
-
+function IsEmpty(element)
+{
+  return typeof element === "object" &&
+            element  !== null &&
+            Object.keys(element).length === 0 &&
+            element.constructor === Object;
+}

@@ -1,9 +1,9 @@
 /**
  * Combines SVG objects and saves it in the device
- * @param {SVG component that has the waveform} signalSvg 
- * @param {SVG component that holds the background grid} gridSvg 
- * @param {SVG component that holds the names of the signals} nameSvg 
- * @param {Output filename} filename 
+ * @param {svg} signalSvg -SVG component that has the waveform 
+ * @param {svg} gridSvg -SVG component that holds the background grid 
+ * @param {svg} nameSvg -SVG component that holds the names of the signals 
+ * @param {string} filename -Output filename 
  */
 export function combineAndSaveSVG(signalSvg, gridSvg, nameSvg, filename = 'combined.svg') {
   const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -113,8 +113,8 @@ export function openJSONFile() {
 
 /**
  * 
- * @param {Saves Json file in the desktop} data 
- * @param {Name of the file} filename 
+ * @param {JSON} data -JSON data to save
+ * @param {string} filename -name of the file 
  */
 export function saveJSONFile(data, filename = "data.json") {
   const json = JSON.stringify(data, null, 2); // pretty-print with 2-space indent

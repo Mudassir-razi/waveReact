@@ -12,7 +12,6 @@
             "name": "Launch React App on firefox",
             "url": "http://localhost:3000",
             "webRoot": "${workspaceFolder}/src",
-            "trace" : true
         }
     ]
 }
