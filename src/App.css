@@ -119,10 +119,6 @@ html, body {
     padding-right: 0px;
   }
 
-  .signal-label:hover {
-    font-size: 13px;
-  }
-
   .signal-label-selected {
     height: 38px;
     display: flex;
