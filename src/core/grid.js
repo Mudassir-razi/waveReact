@@ -35,42 +35,8 @@ export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetX, offse
         ref={BGcanvasRef}
         width={timeStamp * dx} 
         height={signalCount * (dy + offsetY) + 5}
-        style={{ position: "absolute", top: 0, left: offsetX, zIndex: 1, backgroundColor:"transparent"}} 
-        >
+        style={{ position: "absolute", top: 0, left: offsetX, zIndex: 1, backgroundColor:"transparent"}}>
             {gridLines}
-            <line
-                id='selectionLine1'
-                x1={(dragging ? prevMouse[0] * dx : mouse[0] * dx) + 0.5}
-                y1={0.5}
-                x2={(dragging ? prevMouse[0] * dx : mouse[0] * dx) + 0.5}
-                y2={(signalCount * (dy + offsetY) + 5.5)}
-                stroke={"red"}
-                strokeOpacity={1}
-                strokeWidth={1}
-                pointerEvents="none" // does not block mouse events
-            />
-            <line
-                id='selectionLine2'
-                x1={(mouse[0]+1) * dx + 0.5}
-                y1={0.5}
-                x2={(mouse[0]+1) * dx + 0.5}
-                y2={(signalCount * (dy + offsetY) + 5.5)}
-                stroke={"red"}
-                strokeWidth={1}
-                strokeOpacity={1}
-                pointerEvents="none" // does not block mouse events
-            />
-
-            <rect
-                id='selectionRect'
-                x={0}
-                y={mouse[1] * (dy + offsetY)}
-                width={timeStamp * dx}
-                height={(dy + offsetY) + 5}
-                fill="rgba(10, 10, 10, 0.1)"
-                pointerEvents="none" // allows mouse events to pass through
-            />
-
         </svg>
     );
 }

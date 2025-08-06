@@ -8,7 +8,7 @@ const CollapsibleRightTab = () => {
     <div
       style={{
         position: 'fixed',
-        top: '540px',
+        top: '400px',
         right: 0,
         display: 'flex',
         flexDirection: 'row-reverse',
@@ -52,12 +52,13 @@ const CollapsibleRightTab = () => {
           fontFamily:'monospace',
         }}
       >
-        <p>1. Add new button to add new signals</p>
-        <p>2. You can change the tab names (try double click)</p>
-        <p>3. The green box over the add new button? turns red if you enter incorrect code</p>
-        <p>4. Format code with auto-format</p>
-        <p>5. use (pattern, count) to repeat. 10(., 5) ==> 10.....</p>
-        <p>6. Color codes are- r g b a m o v y</p>
+        <p>1. Add new button to add new signals.</p>
+        <p>2. You can change the tab names (try double click).</p>
+        <p>3. The green box over the add new button? turns RED if you enter incorrect code.</p>
+        <p>4. Group waves using ["groupName", wave1, wave2]. Nested group is also supported.</p>
+        <p>5. use (pattern, count) to repeat. Ex- =(10, 3) -> =101010 This works in both wave and data.</p>
+        <p>6. use uc|dc(baseValue, count) for up and down count. uc(5,5) -> 5 6 7 8 9 WOrks only in data.</p>
+        <p>7. Color codes are- r g b a m o v y.</p>
       </div>
     </div>
   );

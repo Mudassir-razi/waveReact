@@ -79,8 +79,8 @@ function renderAllSignals(svg_canvas, signals, dx, dy, offsetY)
             Object.keys(signals[i] ).length === 0 &&
             signals[i].constructor === Object) continue;
         var name = signals[i].name;
-        var signal = signals[i].wave;
-        var data = signals[i].data;
+        var signal = expandWavePattern(signals[i].wave);
+        var data = expandDataPatterns(signals[i].data);
         renderSignal(svg_canvas, name, signal, data, i, parseInt(dx), parseInt(dy), offsetY, signals[i].width);
     }
 }
@@ -105,7 +105,7 @@ function renderSignal(ctx, name, wave, data, idx, dx, dy, offsetY, lineWidth)
   var last = wave[0] === '1' ? '0' : '1';
   var dataIndex = 0;
 
-  const LUT = GetLUT(dx, dy, div, offsetY);
+  const LUT = GetLUT(dx, dy, div, offsetY, 1);
 
 
   for(var i = 0;i < wave.length; i++)
@@ -196,7 +196,7 @@ function renderSignal(ctx, name, wave, data, idx, dx, dy, offsetY, lineWidth)
         }
         const t1 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
         t1.setAttribute("x", i*dx + dx*0.70 + busLen*14);
-        t1.setAttribute("y", idx * (dy+offsetY) + 1.10*dy);
+        t1.setAttribute("y", idx * (dy+offsetY) + 1.20*dy);
         t1.textContent = `${dataIndex < data.split(' ').length ? data.split(' ')[dataIndex] : ' '}`;
         texts.push(t1);
         dataIndex++;
@@ -376,11 +376,11 @@ function getWave(segment, offsetX, offsetY, LUT)
 }
 
 //Look-up table for the points on the signal segment
-function GetLUT(dx, dy, div, offsetY)
+function GetLUT(dx, dy, div, offsetY, hScale)
 {
-  var dx1 = Math.floor(0.5 * dx/div) + 0.5;
-  var dx2 = Math.floor(0.75 * dx/div) + 0.5;
-  var dx3 = dx - (dx1 + dx2) + 0.5;
+  var dx1 = (Math.floor(0.5 * dx/div)) * hScale + 0.5;
+  var dx2 = (Math.floor(0.75 * dx/div)) * hScale + 0.5;
+  var dx3 = (dx - (dx1 + dx2))*hScale + 0.5;
   var bo = offsetY + 0.5;
   var lut = [{x:0, y:bo+dy}, {x:dx1, y:bo+dy}, {x:dx1+dx2, y:bo+dy}, {x:dx1+dx2+dx3, y:bo+dy}, {x:dx1+dx2/2, y:bo+dy/2},
   {x:0, y:bo}, {x:dx1, y:bo}, {x:dx1+dx2, y:bo}, {x:dx1+dx2+dx3, y:bo}];
@@ -388,13 +388,31 @@ function GetLUT(dx, dy, div, offsetY)
   return lut;
 }
 
+//expands patterns liike (a, 3) to aaa
+function expandWavePattern(input) {
+  return input.replace(/\(([^,]+),\s*(\d+)\)/g, (_, pattern, count) => {
+    return pattern.repeat(parseInt(count));
+  });
+}
 
-//evaluates string
-function evaluateExpression(expr) {
-  try {
-    const fn = new Function(`return (${JSON.stringify(expr)});`);
-    return fn();
-  } catch (e) {
-    return `Error: ${e.message}`;
-  }
+function expandDataPatterns(input) {
+  // Handle uc(value, count) and dc(value, count)
+  input = input.replace(/\b(uc|dc)\((\d+),\s*(\d+)\)/g, (_, mode, start, count) => {
+    const s = parseInt(start);
+    const c = parseInt(count);
+    const result = [];
+
+    for (let i = 0; i < c; i++) {
+      result.push(mode === 'uc' ? s + i : s - i);
+    }
+
+    return result.join(' ');
+  });
+
+  // Handle (pattern,count) for repetition
+  input = input.replace(/\(([^(),]+),\s*(\d+)\)/g, (_, pattern, count) => {
+    return pattern.repeat(parseInt(count));
+  });
+
+  return input;
 }
