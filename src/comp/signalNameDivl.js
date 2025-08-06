@@ -1,11 +1,13 @@
 import React from 'react';
 
+// Configurable top offset for SVG content
+const topOffset = 10; // Adjust this value to change the top padding of the SVG
+const baseX = 20; // Base X position for rendering
+const indentPerLevel = 20; // Indentation per nesting level
+const bracketWidth = 10; // Width of the bracket
+
 export default function SignalNameDiv({ signals, dy, offsetY, signalCount, selectionIndex, Click }) {
-    // Configurable top offset for SVG content
-    const topOffset = 1; // Adjust this value to change the top padding of the SVG
-    const baseX = 20; // Base X position for rendering
-    const indentPerLevel = 20; // Indentation per nesting level
-    const bracketWidth = 10; // Width of the bracket
+    
 
     // Calculate total height for SVG
     const calculateHeight = (items) => {
@@ -14,35 +16,11 @@ export default function SignalNameDiv({ signals, dy, offsetY, signalCount, selec
             if (Array.isArray(item)) {
                 height += dy + offsetY; // For group name
                 height += calculateHeight(item.slice(1)); // Process children
-            } else if (Object.keys(item).includes('name')) {
+            } else if (Object.keys(item).includes('name') || IsEmpty(item)) {
                 height += dy + offsetY; // For signal
             }
         });
         return height;
-    };
-
-    // Calculate max name length for width adjustment
-    const calculateMaxNameLength = (items, maxLength = 0) => {
-        items.forEach(item => {
-            if (Array.isArray(item)) {
-                maxLength = Math.max(maxLength, item[0].length); // Group name
-                maxLength = calculateMaxNameLength(item.slice(1), maxLength); // Children
-            } else if (Object.keys(item).includes('name')) {
-                maxLength = Math.max(maxLength, item.name.length);
-            }
-        });
-        return maxLength;
-    };
-
-    // Calculate max nesting level for width
-    const calculateMaxLevel = (items, level = 0) => {
-        let maxLevel = level;
-        items.forEach(item => {
-            if (Array.isArray(item)) {
-                maxLevel = Math.max(maxLevel, calculateMaxLevel(item.slice(1), level + 1));
-            }
-        });
-        return maxLevel;
     };
 
     // Render items recursively
@@ -80,10 +58,10 @@ export default function SignalNameDiv({ signals, dy, offsetY, signalCount, selec
                 elements.push(
                     <path
                         key={`bracket-${level}-${index}`}
-                        d={`M${bracketXEnd},${currentY}
-                           L${bracketXStart},${currentY} 
-                           L${bracketXStart},${currentY + groupHeight}
-                           L${bracketXEnd},${currentY + groupHeight}`}
+                        d={`M${bracketXEnd},${currentY+4}
+                           L${bracketXStart},${currentY+4} 
+                           L${bracketXStart},${currentY + groupHeight-4}
+                           L${bracketXEnd},${currentY + groupHeight-4}`}
                         stroke="black"
                         strokeWidth="2"
                         fill="none"
@@ -93,7 +71,10 @@ export default function SignalNameDiv({ signals, dy, offsetY, signalCount, selec
                 currentY += offsetY; // Space for group name
                 elements.push(...renderItems(children, level + 1, currentY));
                 currentY += groupHeight;
-            } else if (Object.keys(item).includes('name')) {
+            }
+            
+            //If it's a JSON object
+            else if (Object.keys(item).includes('name')) {
                 // Signal name (right of bracket)
                 const signalX = baseX + level * indentPerLevel + bracketWidth-10;
                 elements.push(
@@ -111,6 +92,10 @@ export default function SignalNameDiv({ signals, dy, offsetY, signalCount, selec
                 );
                 currentY += dy + offsetY;
             }
+            else if(IsEmpty(item))
+            {
+               currentY += dy + offsetY;
+            }
         });
 
         return elements;
@@ -119,7 +104,7 @@ export default function SignalNameDiv({ signals, dy, offsetY, signalCount, selec
     const maxLevel = calculateMaxLevel(signals);
     const maxNameLength = calculateMaxNameLength(signals);
     const totalHeight = calculateHeight(signals) + topOffset;
-    const totalWidth = baseX + maxLevel * indentPerLevel + maxNameLength * 9 + 15;
+    const totalWidth = baseX + maxLevel * indentPerLevel + maxNameLength * 9;
 
     return (
         <svg
@@ -131,4 +116,45 @@ export default function SignalNameDiv({ signals, dy, offsetY, signalCount, selec
             {renderItems(signals)}
         </svg>
     );
+}
+
+export function GetNameSVGWidth(signals)
+{
+    const value = baseX + calculateMaxLevel(signals) * indentPerLevel + calculateMaxNameLength(signals) * 9 ;
+    console.log(value);
+    return value;
+}
+
+
+// Calculate max name length for width adjustment
+const calculateMaxNameLength = (items, maxLength = 0) => {
+    items.forEach(item => {
+        if (Array.isArray(item)) {
+            maxLength = Math.max(maxLength, item[0].length); // Group name
+            maxLength = calculateMaxNameLength(item.slice(1), maxLength); // Children
+        } else if (Object.keys(item).includes('name')) {
+            maxLength = Math.max(maxLength, item.name.length);
+        }
+
+    });
+    return maxLength;
+};
+
+// Calculate max nesting level for width
+const calculateMaxLevel = (items, level = 0) => {
+    let maxLevel = level;
+    items.forEach(item => {
+        if (Array.isArray(item)) {
+            maxLevel = Math.max(maxLevel, calculateMaxLevel(item.slice(1), level + 1));
+        }
+    });
+    return maxLevel;
+};
+
+function IsEmpty(element)
+{
+  return typeof element === "object" &&
+            element  !== null &&
+            Object.keys(element).length === 0 &&
+            element.constructor === Object;
 }
