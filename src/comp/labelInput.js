@@ -44,7 +44,7 @@ const EditableLabel = ({
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
       autoFocus
-      style={{ textAlign: 'left', display: 'block' }}
+      style={{ textAlign: 'left'}}
       className={selectionIndex === id ? selectClass : normalClass}
     />
   ) : (

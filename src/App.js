@@ -2,7 +2,7 @@ import logo from './logo.svg';
 import './App.css';
 import './comp/button';
 import Grid from './core/grid';
-import {useState} from 'react';
+import {useState, useRef, useEffect} from 'react';
 import SignalWindow from './core/signal';
 import SignalNameDiv from './comp/signalNameDivl';
 import {GetNameSVGWidth} from './comp/signalNameDivl';
@@ -10,6 +10,8 @@ import TabBar from './comp/tabBar';
 import CollapsibleTab from './comp/CollapsibleTab';
 import {combineAndSaveSVG, openJSONFile, saveJSONFile} from './core/fileSys';
 import {parse2Json, parse2String, flattenJson } from './core/parser';
+
+const KEYWORDS = ["name", "data", "wave", "width", "scale"];
 
 function App() {
 
@@ -40,7 +42,6 @@ function App() {
 
   //signal text for display
   const [text, setText] = useState(parse2String(signals));
-  const [editorText, setEditorText] = useState(parse2String(signals));
 
   //Error parsing
   const [error, setError] = useState(null);
@@ -55,7 +56,11 @@ function App() {
   const [mousePos, setMousePos] = useState([0, 0]);
   const [prevMousePos, setPrevMousePos] = useState([0, 0]);
   const [isDragging, setIsDraggin] = useState(false);
- 
+  const editorRef = useRef(null);
+
+  useEffect(() => {
+    editorRef.current.innerHTML = highlightKeywords(editorRef.current.innerText);
+  }, []);
 
   //!................................ EVENT HANDLERS for BUTTONS ............................................
   //Adds new signal
@@ -68,8 +73,8 @@ function App() {
     SetSignals(prev => [...prev, newItem]);
     setFlatSignals(updatedFlatSignals);
     setText(parse2String(updatedSignal));
-    setEditorText(parse2String(updatedSignal));
-    setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(updatedSignal), timeStamp: maxTimeStamp(updatedSignal), signalCount: updatedFlatSignals.length + 1 }));
+    editorRef.current.innerHTML = highlightKeywords(parse2String(updatedSignal));
+    setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(updatedSignal), timeStamp: maxTimeStamp(updatedFlatSignals), signalCount: updatedFlatSignals.length + 1 }));
 
     //updates tab information
     const updatedTab = tabs.map((tab, i) => {
@@ -83,8 +88,12 @@ function App() {
 
   //Auto-format code
   const handleCodeFormat = () => {
-    console.log("Code formatted");
-    setEditorText(text);
+    try {
+      editorRef.current.innerHTML = highlightKeywords(parse2String(signals));
+      setError(null);
+    } catch (e) {
+      setError("Failed to format: " + e.message);
+    }
   }
 
   //Open file handler
@@ -96,37 +105,24 @@ function App() {
         setSelectionTab(0);
         SetSignals(data[0].signals);
         setSelectionIndex(0);
-        setEditorText(parse2String(data[0].signals));
+        const flatSignals = flattenJson(data[0].signals);
+        setFlatSignals(flatSignals);
+        editorRef.current.innerHTML = highlightKeywords(parse2String(data[0].signals));
       })
       .catch(err => {
         alert(err.message);
       });
   }
 
-  //Save file Handler
-  const handleSaveFile = () => {
-    saveJSONFile(tabs, "signal.json");
-  }
-
-  //Save SVG
-  const handleSaveSVG = () => {
-    combineAndSaveSVG(document.getElementById("mainLayer"),
-      document.getElementById("grid"),
-      document.getElementById("nameList"),
-      canvasConfig.offsetX, tabs[selectionTab].name);
-  }
-
   //Takes the text editor text input and tries to parse it into JSON object
   const handlerSignalCodeInput = (newText) => {
-    setEditorText(newText); // Update textarea immediately
-
     try {
-      const jsonObj = parse2Json(newText) // convert to JSON array
+      const jsonObj = parse2Json(editorRef.current.innerText); // convert to JSON array
       const flatSignals = flattenJson(jsonObj); // flatten the JSON array
       SetSignals(jsonObj); // Only if valid
       setText(parse2String(signals));
       setFlatSignals(flatSignals);
-      setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(jsonObj), timeStamp: maxTimeStamp(jsonObj) + 10, signalCount: flatSignals.length }));
+      setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(jsonObj), timeStamp: maxTimeStamp(flatSignals) + 10, signalCount: flatSignals.length }));
 
       //update tab information
       const updatedTab = tabs.map((tab, i) => {
@@ -144,6 +140,19 @@ function App() {
     }
   }
 
+  //Save file Handler
+  const handleSaveFile = () => {
+    saveJSONFile(tabs, "signal.json");
+  }
+
+  //Save SVG
+  const handleSaveSVG = () => {
+    combineAndSaveSVG(document.getElementById("mainLayer"),
+      document.getElementById("grid"),
+      document.getElementById("nameList"),
+      canvasConfig.offsetX, tabs[selectionTab].name);
+  }
+
   //tab switching handler
   const handerlTabClick = (e) => {
     //we push current data to the current tab
@@ -158,11 +167,14 @@ function App() {
     setTabs(updatedTab);
 
     //now load new data from next tab
+    const flatSignals = flattenJson(tabs[e].signals);
     setSelectionIndex(0);
     setSelectionTab(e);
     SetSignals(tabs[e].signals);
-    setEditorText(parse2String(tabs[e].signals));
-    setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(tabs[e].signals), timeStamp: maxTimeStamp(tabs[e].signals) + 10, signalCount: tabs[e].signals.length + 1 }));
+    setFlatSignals(flatSignals);
+    setText(parse2String(tabs[e].signals));
+    editorRef.current.innerHTML = highlightKeywords(parse2String(tabs[e].signals));
+    setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(tabs[e].signals), timeStamp: maxTimeStamp(flatSignals) + 10, signalCount: flatSignals.length}));
   }
 
   //Changes the tab name
@@ -347,7 +359,6 @@ function App() {
       }
     }
     setText(parse2String(updatedSignal));
-    setEditorText(parse2String(updatedSignal));
     setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(updatedSignal), timeStamp: maxTimeStamp(updatedSignal) + 10 }));
 
     //update tab
@@ -470,7 +481,21 @@ function App() {
             <button className='button-5' onClick={handleOpenFile}>Open file</button>
           </div>
           <div className='control-group'>
-            {(<textarea spellCheck={false} className='textarea' rows={10} cols={98} value={editorText} onChange={(e) => handlerSignalCodeInput(e.target.value)}></textarea>)}
+            <div
+              ref={editorRef}
+              contentEditable
+              spellCheck={false}
+              onInput={handlerSignalCodeInput}
+              style={{
+                minHeight: "200px",
+                padding: "10px",
+                border: "1px solid gray",
+                fontFamily: "monospace",
+                whiteSpace: "pre",
+                overflow: "auto",
+              }}
+              >
+            </div>
           </div>
 
         </div>
@@ -511,3 +536,15 @@ function maxTimeStamp(signals) {
 
   return maxLen;
 }
+
+ function highlightKeywords(text) {
+    // Escape any HTML and apply highlighting
+    const escaped = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+    // Replace each keyword with a span
+    const pattern = new RegExp(`\\b(${KEYWORDS.join("|")})\\b`, "g");
+    return escaped.replace(pattern, `<span class="highlight">$1</span>`);
+  }

@@ -52,11 +52,12 @@ const CollapsibleRightTab = () => {
           fontFamily:'monospace',
         }}
       >
-        <p>1. Use mouse click to toggle bit or extend waveform</p>
-        <p>2. Click and drag to copy the bit over to selected ones.</p>
-        <p>3. Add new button to add new signals</p>
-        <p>4. You can change the tab names (try double click)</p>
-        <p>4. The green box over the add new button? turns red if you enter incorrect code</p>
+        <p>1. Add new button to add new signals</p>
+        <p>2. You can change the tab names (try double click)</p>
+        <p>3. The green box over the add new button? turns red if you enter incorrect code</p>
+        <p>4. Format code with auto-format</p>
+        <p>5. use (pattern, count) to repeat. 10(., 5) ==> 10.....</p>
+        <p>6. Color codes are- r g b a m o v y</p>
       </div>
     </div>
   );

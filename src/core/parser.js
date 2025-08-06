@@ -84,9 +84,18 @@ export function parse2String(tree) {
 
     const parts = allKeys.map(key => {
       const keyStr = key.padEnd(keyWidths[key]);
-      const val = obj.hasOwnProperty(key)
-        ? (typeof obj[key] === "string" ? `"${obj[key]}"` : String(obj[key]))
-        : "";
+      let val;
+      if (obj.hasOwnProperty(key)) {
+        const value = obj[key];
+        if (typeof value === "string") {
+          val = `"${value}"`;
+        } else {
+          val = String(value);
+        }
+      } else {
+        val = `" "`; // Explicitly add a blank string in quotes
+      }
+
       const valStr = val.padEnd(valueWidths[key]);
       return `${keyStr} : ${valStr}`;
     });
@@ -148,7 +157,7 @@ export function flattenJson(tree) {
     } else if (typeof node === "object" && node !== null) {
       if (Object.keys(node).length === 0) {
         result.push({}); // preserve empty objects
-      } else if ('name' in node && 'data' in node) {
+      } else if ('name' in node && 'wave' in node) {
         result.push(node);
       }
       // else: ignore partial/invalid objects
