@@ -6,7 +6,7 @@ const baseX = 20; // Base X position for rendering
 const indentPerLevel = 20; // Indentation per nesting level
 const bracketWidth = 10; // Width of the bracket
 
-export default function SignalNameDiv({ signals, dy, offsetY, signalCount, selectionIndex, Click }) {
+export default function SignalNameDiv({ signals, dy, offsetY, viewMode }) {
     
 
     // Calculate total height for SVG
@@ -14,7 +14,7 @@ export default function SignalNameDiv({ signals, dy, offsetY, signalCount, selec
         let height = 0;
         items.forEach(item => {
             if (Array.isArray(item)) {
-                height += dy + offsetY; // For group name
+                //height += dy + offsetY; // For group name
                 height += calculateHeight(item.slice(1)); // Process children
             } else if (Object.keys(item).includes('name') || IsEmpty(item)) {
                 height += dy + offsetY; // For signal
@@ -22,6 +22,11 @@ export default function SignalNameDiv({ signals, dy, offsetY, signalCount, selec
         });
         return height;
     };
+
+    const maxLevel = calculateMaxLevel(signals);
+    const maxNameLength = calculateMaxNameLength(signals);
+    const totalHeight = calculateHeight(signals) + topOffset;
+    const totalWidth = baseX + maxLevel * indentPerLevel + maxNameLength * 9;
 
     // Render items recursively
     const renderItems = (items, level = 0, startY = topOffset) => {
@@ -43,11 +48,11 @@ export default function SignalNameDiv({ signals, dy, offsetY, signalCount, selec
                     <text
                         key={`group-${level}-${index}`}
                         className="group-label"
-                        x={bracketXStart + bracketWidth / 2 + 10}
+                        x={bracketXStart + bracketWidth / 2 + 16}
                         y={currentY + groupHeight / 2 + dy / 2 - 10}
                         transform={`rotate(-90, ${bracketXStart + bracketWidth / 2}, ${currentY + groupHeight / 2 + dy / 2})`}
                         textAnchor="middle"
-                        fill="purple"
+                        fill={viewMode ? "blue" :"#5e83b8ff"}
                         fontSize={12}
                     >
                         {groupName}
@@ -55,37 +60,51 @@ export default function SignalNameDiv({ signals, dy, offsetY, signalCount, selec
                 );
 
                 // Right-facing bracket
+                //Bracket paramters
+                const radius = 1;
+                const xStart = bracketXStart;
+                const xEnd = bracketXEnd;
+                const yStart = currentY;
+                const yEnd = currentY + groupHeight - 12 ;
+
+                const d = `
+                M ${xEnd},${yStart + radius}                             
+                Q ${xEnd},${yStart} ${xEnd - radius},${yStart}           
+                L ${xStart + radius},${yStart}                           
+                Q ${xStart},${yStart} ${xStart},${yStart + radius}       
+                L ${xStart},${yEnd - radius}                             
+                Q ${xStart},${yEnd} ${xStart + radius},${yEnd}           
+                L ${xEnd - radius},${yEnd}                               
+                Q ${xEnd},${yEnd} ${xEnd},${yEnd - radius}               
+                `;
                 elements.push(
                     <path
                         key={`bracket-${level}-${index}`}
-                        d={`M${bracketXEnd},${currentY+4}
-                           L${bracketXStart},${currentY+4} 
-                           L${bracketXStart},${currentY + groupHeight-4}
-                           L${bracketXEnd},${currentY + groupHeight-4}`}
-                        stroke="black"
-                        strokeWidth="2"
+                        d={d}
+                        stroke={viewMode ? "blue" : "#5e83b8ff"}
+                        strokeWidth="1"
                         fill="none"
                     />
                 );
 
-                currentY += offsetY; // Space for group name
+                //currentY += offsetY; // Space for group name
                 elements.push(...renderItems(children, level + 1, currentY));
                 currentY += groupHeight;
             }
             
             //If it's a JSON object
             else if (Object.keys(item).includes('name')) {
-                // Signal name (right of bracket)
-                const signalX = baseX + level * indentPerLevel + bracketWidth-10;
+                const maxLevel = calculateMaxLevel(signals);
+                const signalX = baseX + maxLevel * indentPerLevel + bracketWidth + maxNameLength*7; // fixed column for all signals
+
                 elements.push(
                     <text
                         key={`signal-${level}-${index}`}
                         className="signal-label"
                         x={signalX}
                         y={currentY + dy / 2}
-                        textAnchor="start"
-                        fill="blue"
-                        onClick={() => Click && Click(index)}
+                        textAnchor="end"
+                        fill={viewMode ? "blue" :"#5e83b8ff"}
                     >
                         {item.name}
                     </text>
@@ -101,18 +120,18 @@ export default function SignalNameDiv({ signals, dy, offsetY, signalCount, selec
         return elements;
     };
 
-    const maxLevel = calculateMaxLevel(signals);
-    const maxNameLength = calculateMaxNameLength(signals);
-    const totalHeight = calculateHeight(signals) + topOffset;
-    const totalWidth = baseX + maxLevel * indentPerLevel + maxNameLength * 9;
-
     return (
         <svg
             id="nameList"
             width={totalWidth}
             height={totalHeight}
-            style={{ position: "absolute", top: 0, left: 0, zIndex: 3, backgroundColor: "white" }}
+            style={{ position: "absolute", top: 0, left: 0, zIndex: 3}}
         >
+            <rect 
+                width={totalWidth}
+                height={totalHeight}
+                style={{ position: "absolute", top: 0, left: 0, zIndex: 3, fill : viewMode ? "white" : "black"}}>
+            </rect>
             {renderItems(signals)}
         </svg>
     );
@@ -120,8 +139,8 @@ export default function SignalNameDiv({ signals, dy, offsetY, signalCount, selec
 
 export function GetNameSVGWidth(signals)
 {
-    const value = baseX + calculateMaxLevel(signals) * indentPerLevel + calculateMaxNameLength(signals) * 9 ;
-    console.log(value);
+    const value = baseX + calculateMaxLevel(signals) * indentPerLevel + calculateMaxNameLength(signals) * 12 + 10;
+//      const totalWidth = baseX + maxLevel * indentPerLevel + maxNameLength * 9;
     return value;
 }
 
@@ -158,3 +177,4 @@ function IsEmpty(element)
             Object.keys(element).length === 0 &&
             element.constructor === Object;
 }
+

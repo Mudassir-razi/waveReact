@@ -23,7 +23,7 @@ export function parse2Json(str) {
 
 
  /**
- * Formats a list of flat JSON objects:
+ * Formats a list of flat JSON objects to String:
  * - Each object on one line
  * - Values aligned column-wise
  * - Output wrapped in [ ] like valid JSON array
@@ -70,7 +70,7 @@ export function parse2String(tree) {
       for (const key of allKeys) {
         const val = node.hasOwnProperty(key)
           ? (typeof node[key] === "string" ? `"${node[key]}"` : String(node[key]))
-          : "";
+          : '';
         valueWidths[key] = Math.max(valueWidths[key], val.length);
       }
     }

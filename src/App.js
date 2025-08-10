@@ -4,12 +4,14 @@ import './comp/button';
 import Grid from './core/grid';
 import {useState, useRef, useEffect} from 'react';
 import SignalWindow from './core/signal';
+import {maxTimeStamp} from './core/signal';
 import SignalNameDiv from './comp/signalNameDivl';
 import {GetNameSVGWidth} from './comp/signalNameDivl';
 import TabBar from './comp/tabBar';
 import CollapsibleTab from './comp/CollapsibleTab';
 import {combineAndSaveSVG, openJSONFile, saveJSONFile} from './core/fileSys';
 import {parse2Json, parse2String, flattenJson } from './core/parser';
+import ToggleButton from "./comp/toggleButton";
 
 const KEYWORDS = ["name", "data", "wave", "width", "scale"];
 
@@ -27,7 +29,6 @@ function App() {
     offsetX: 0,
     bgColor: "#000000",
     gridColor: "#FFFFFF"
-
   });
 
   //tab data
@@ -51,6 +52,9 @@ function App() {
 
   //selected tab
   const [selectionTab, setSelectionTab] = useState(0);
+
+  //dark mode
+  const [viewMode, setViewMode] = useState(1);  //by default 1. light mode
 
   //  mouse position
   const [mousePos, setMousePos] = useState([0, 0]);
@@ -122,7 +126,7 @@ function App() {
       SetSignals(jsonObj); // Only if valid
       setText(parse2String(signals));
       setFlatSignals(flatSignals);
-      setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(jsonObj), timeStamp: maxTimeStamp(flatSignals) + 10, signalCount: flatSignals.length }));
+      setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(jsonObj), timeStamp: maxTimeStamp(flatSignals), signalCount: flatSignals.length }));
 
       //update tab information
       const updatedTab = tabs.map((tab, i) => {
@@ -150,7 +154,8 @@ function App() {
     combineAndSaveSVG(document.getElementById("mainLayer"),
       document.getElementById("grid"),
       document.getElementById("nameList"),
-      canvasConfig.offsetX, tabs[selectionTab].name);
+      canvasConfig.offsetX, tabs[selectionTab].name,
+      viewMode);
   }
 
   //tab switching handler
@@ -174,7 +179,7 @@ function App() {
     setFlatSignals(flatSignals);
     setText(parse2String(tabs[e].signals));
     editorRef.current.innerHTML = highlightKeywords(parse2String(tabs[e].signals));
-    setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(tabs[e].signals), timeStamp: maxTimeStamp(flatSignals) + 10, signalCount: flatSignals.length}));
+    setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(tabs[e].signals), timeStamp: maxTimeStamp(flatSignals), signalCount: flatSignals.length}));
   }
 
   //Changes the tab name
@@ -359,7 +364,7 @@ function App() {
       }
     }
     setText(parse2String(updatedSignal));
-    setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(updatedSignal), timeStamp: maxTimeStamp(updatedSignal) + 10 }));
+    setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(updatedSignal), timeStamp: maxTimeStamp(updatedSignal)}));
 
     //update tab
     const updatedTab = tabs.map((tab, i) => {
@@ -382,9 +387,11 @@ function App() {
         <div id="banner">
           <img src={logo} className="App-logo" alt="logo" />
           <h1>WaveReact</h1>
+          <ToggleButton onChange={(v)=>{v === true ? setViewMode(0) : setViewMode(1)}} size="sm" labels={["☀️","🌙"]} />
+          <h2>                .</h2>
         </div>
         {/* The OUTPUT of the app. Signal and it's names */}
-        <div id="output-panel">
+        <div id="output-panel"  style={{ background : viewMode ? 'white' : 'black' }}>
 
           {/* Signal renderer canvas */}
           <div id="canvas-wrapper" style={{ display: 'flex', position: 'relative' }}>
@@ -396,15 +403,12 @@ function App() {
                 top: 0,
                 left: 0,
                 zIndex: 3,
-                background: 'white'  // optional: avoid overlap/transparent text
+                background: 'transparent'  // optional: avoid overlap/transparent text
               }}
               signals={signals}
               dy={canvasConfig.dy}
-              offsetX={canvasConfig.offsetX}
               offsetY={canvasConfig.offsetY}
-              signalCount={canvasConfig.signalCount}
-              selectionIndex={selectionIndex}
-              Click={(id) => setSelectionIndex(id)}
+              viewMode={viewMode}
             />
 
             {/* Scrollable canvas area */}
@@ -412,8 +416,7 @@ function App() {
               style={{
                 overflow: 'auto',
                 width: '100%',
-                height:
-                  canvasConfig.signalCount * (canvasConfig.dy + canvasConfig.offsetY) +
+                height: canvasConfig.signalCount * (canvasConfig.dy + canvasConfig.offsetY) +
                   100,
                 position: 'relative'
               }}
@@ -460,6 +463,7 @@ function App() {
                   onDown={() => console.log("Mouse Down")}
                   onMove={() => console.log("Mouse Move")}
                   onUp={() => console.log("Mouse UP")}
+                  viewMode={viewMode}
                 />
               </div>
             </div>
@@ -468,11 +472,11 @@ function App() {
         </div>
 
         {/* UI elements holder */}
-        <div id="ui-panel">
+        <div id="ui-panel"  style={{ background : viewMode ? '#bdbdbd' : '#20242cff'  }}>
           <CollapsibleTab></CollapsibleTab>
           <div className='control-group'>
-            <svg height="20" width="15">
-              <rect x="0" y="0" height="10" width="15" fill={error === null ? "green" : "red"} strokeWidth="1" />
+            <svg height="20" width="75">
+              <rect x="0" y="0" height="10" width="75" style={error === null ? indicatorGood : indicatorBad} strokeWidth="0" />
             </svg>
             <button className='button-5' onClick={handlerAddbutton}> Add new </button>
             <button className='button-5' onClick={handleCodeFormat}>Auto-format</button>
@@ -480,22 +484,39 @@ function App() {
             <button className='button-5' onClick={handleSaveSVG}>Save SVG</button>
             <button className='button-5' onClick={handleOpenFile}>Open file</button>
           </div>
-          <div className='control-group'>
+          <div className='control-editor-group'>
             <div
               ref={editorRef}
               contentEditable
               spellCheck={false}
+            
               onInput={handlerSignalCodeInput}
+              onKeyDown={(e) => {
+                if (e.key === "Tab") {
+                  e.preventDefault(); // stop focus change
+                  const selection = window.getSelection();
+                  const range = selection.getRangeAt(0);
+
+                  // Insert two spaces
+                  range.deleteContents();
+                  range.insertNode(document.createTextNode("  "));
+
+                  // Move cursor after inserted spaces
+                  range.collapse(false);
+                  selection.removeAllRanges();
+                  selection.addRange(range);
+                }
+              }}
               style={{
                 minHeight: "200px",
                 padding: "10px",
                 border: "1px solid gray",
                 fontFamily: "monospace",
+                color: viewMode ? "black" : "white",
                 whiteSpace: "pre",
                 overflow: "auto",
               }}
-              >
-            </div>
+            ></div>
           </div>
 
         </div>
@@ -513,30 +534,6 @@ export default App;
 
 //Helper functions...............................................
 
-
-function maxTimeStamp(signals) {
-  let maxLen = 0;
-
-  for (let i = 0; i < signals.length; i++) {
-    const element = signals[i];
-
-    // Skip empty objects
-    if (
-      typeof element !== "object" ||
-      element === null ||
-      Object.keys(element).length === 0 ||
-      element.constructor !== Object
-    ) {
-      continue;
-    }
-
-    const len = !Object.keys(element).includes('space') ? element.wave.length : 0;
-    maxLen = len > maxLen ? len : maxLen;
-  }
-
-  return maxLen;
-}
-
  function highlightKeywords(text) {
     // Escape any HTML and apply highlighting
     const escaped = text
@@ -548,3 +545,17 @@ function maxTimeStamp(signals) {
     const pattern = new RegExp(`\\b(${KEYWORDS.join("|")})\\b`, "g");
     return escaped.replace(pattern, `<span class="highlight">$1</span>`);
   }
+
+const indicatorGood = {
+  fill: "teal",
+  stroke: "black",
+  filter: "drop-shadow(0 0 6px teal)", // bloom glow effect
+  transition: "filter 0.3s ease, fill 0.3s ease, stroke 0.3s ease",
+};
+
+const indicatorBad = {
+  fill: "maroon",
+  stroke: "black",
+  filter: "drop-shadow(0 0 6px red)",
+  transition: "filter 0.3s ease, fill 0.3s ease, stroke 0.3s ease",
+};

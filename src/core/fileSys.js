@@ -5,7 +5,7 @@
  * @param {svg} nameSvg -SVG component that holds the names of the signals 
  * @param {string} filename -Output filename 
  */
-export function combineAndSaveSVG(signalSvg, gridSvg, nameSvg, filename = 'combined.svg') {
+export function combineAndSaveSVG(signalSvg, gridSvg, nameSvg, filename = 'combined.svg', viewMode) {
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   // Extract widths and height
@@ -20,6 +20,14 @@ export function combineAndSaveSVG(signalSvg, gridSvg, nameSvg, filename = 'combi
   combinedSVG.setAttribute('width', totalWidth);
   combinedSVG.setAttribute('height', gridHeight);
   combinedSVG.setAttribute('viewBox', `0 0 ${totalWidth} ${gridHeight}`);
+
+  // Create background rectangle
+  const bgRect = document.createElementNS(SVG_NS, "rect");
+  bgRect.setAttribute("x", 0);
+  bgRect.setAttribute("y", 0);
+  bgRect.setAttribute("width", totalWidth);
+  bgRect.setAttribute("height", gridHeight);
+  bgRect.setAttribute("fill", viewMode ? "black" : "white");
 
   // Helper: clone and translate group
   function cloneGroup(sourceSvg, offsetX = 0) {
@@ -51,6 +59,7 @@ export function combineAndSaveSVG(signalSvg, gridSvg, nameSvg, filename = 'combi
   nameGroup.setAttribute("font-weight", "bold");
 
   // Append layers in back-to-front order
+  combinedSVG.appendChild(bgRect);      // Background color
   combinedSVG.appendChild(gridGroup);   // back
   combinedSVG.appendChild(signalGroup); // middle
   combinedSVG.appendChild(nameGroup);   // front

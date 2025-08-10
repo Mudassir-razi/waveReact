@@ -11,7 +11,7 @@ export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetX, offse
 
     }, [dx, dy, mouse, prevMouse, dragging, offsetX, offsetY, timeStamp, signalCount]);
 
-    const gridLines = Array.from({ length: timeStamp }, (_, i) => {
+    const gridLines = Array.from({ length: timeStamp+1 }, (_, i) => {
         const x = i * dx;
         return (
         <line
@@ -33,7 +33,7 @@ export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetX, offse
         <svg
         id="grid"
         ref={BGcanvasRef}
-        width={timeStamp * dx} 
+        width={timeStamp * dx+4} 
         height={signalCount * (dy + offsetY) + 5}
         style={{ position: "absolute", top: 0, left: offsetX, zIndex: 1, backgroundColor:"transparent"}}>
             {gridLines}
