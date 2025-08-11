@@ -99,12 +99,13 @@ function renderAllSignals(svg_canvas, signals, dx, dy, offsetY, viewMode)
         var name = signals[i].name;
         var signal = expandWavePattern(signals[i].wave);
         var data = Object.keys(signals[i]).includes("data") ? expandDataPatterns(signals[i].data) : " ";
-        var scale = Object.keys(signals[i]).includes("scale") ?  signals[i].scale : 1;
-        renderSignal(svg_canvas, signal, data, i, parseInt(dx), parseInt(dy), offsetY, signals[i].width, scale, viewMode);
+        var scale = Object.keys(signals[i]).includes("scale") && signals[i].scale !== " " && signals[i].scale !== ""?  signals[i].scale : 1;
+        var color = Object.keys(signals[i]).includes("color") && signals[i].color !== " " && signals[i].color !== ""? darkenHexColor(busColorScheme[signals[i].color],20) : (viewMode ? "black" : "white");
+        renderSignal(svg_canvas, signal, data, i, parseInt(dx), parseInt(dy), offsetY, signals[i].width, scale, color, viewMode);
     }
 }
 
-function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1, Rawscale=1, viewMode)
+function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1, Rawscale=1, lineColor, viewMode)
 {
 
   const parsedInt = parseFloat(Rawscale);
@@ -280,12 +281,12 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
           t1.setAttribute("x", i*dx + dx*0.70 + busLen*14);
           t1.setAttribute("y", idx * (dy+offsetY) + 1.20*dy);
           t1.textContent = `${dataIndex < data.split(' ').length ? data.split(' ')[dataIndex] : ' '}`;
-          points.push(t1);
+          texts.push(t1);
           dataIndex++;
         }
         catch (e)
         {
-          console.log("No data available");
+          console.log(e);
         }
       }
       shapeStarted = true;
@@ -355,7 +356,7 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
   });  
 
   path.setAttribute("d", points);
-  path.setAttribute("stroke", viewMode ? "black" : "white");
+  path.setAttribute("stroke", lineColor);
   path.setAttribute("fill", "none");
   path.setAttribute("stroke-width", lineWidth);
   path.setAttribute("shapreRendering", "crispEdges");
@@ -719,4 +720,27 @@ function getDiagonalHatchPattern({
 
   pattern.appendChild(path);
   return pattern;
+}
+
+function darkenHexColor(hex, percent) {
+    // Remove '#' if present
+    hex = hex.replace(/^#/, '');
+
+    // Convert hex to RGB
+    let r = parseInt(hex.substring(0, 2), 16);
+    let g = parseInt(hex.substring(2, 4), 16);
+    let b = parseInt(hex.substring(4, 6), 16);
+
+    // Calculate darkening amount
+    const amount = Math.round(2.55 * percent); // percentage of 255
+
+    // Darken RGB values, ensuring they don't go below 0
+    r = Math.max(0, r - amount);
+    g = Math.max(0, g - amount);
+    b = Math.max(0, b - amount);
+
+    // Convert RGB back to hex
+    const newHex = ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+
+    return `#${newHex}`;
 }

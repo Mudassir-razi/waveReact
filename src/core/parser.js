@@ -1,3 +1,5 @@
+const KEYWORDS = ["name", "data", "wave", "width", "scale", "color"];
+
 /**
  * Parses a JSON string into an object or list of objects.
  * Throws a detailed error if parsing fails or if the structure is invalid.
@@ -13,6 +15,10 @@ export function parse2Json(str) {
 
     if (!Array.isArray(result)) {
       throw new Error("Parsed result is not an array.");
+    }
+
+    if(CheckError(flattenJson(result))) {
+      throw new Error("Parsed does not contain valid keys");
     }
 
     return result;
@@ -166,4 +172,18 @@ export function flattenJson(tree) {
 
   dfs(tree);
   return result;
+}
+
+export function CheckError(flatSignals)
+{
+  if (!Array.isArray(flatSignals) || flatSignals.length === 0) {
+    throw new Error("No signals found in the JSON data.");
+  }
+
+  for (const signal of flatSignals) {
+    //console.log(Object.keys(signal));
+    if (!KEYWORDS.map(k => {Object.keys(signal).includes(k)})){
+      throw new Error("Signal object missing required keys: " + JSON.stringify(signal));
+    }
+  }
 }

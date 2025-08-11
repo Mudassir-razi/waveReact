@@ -10,10 +10,10 @@ import {GetNameSVGWidth} from './comp/signalNameDivl';
 import TabBar from './comp/tabBar';
 import CollapsibleTab from './comp/CollapsibleTab';
 import {combineAndSaveSVG, openJSONFile, saveJSONFile} from './core/fileSys';
-import {parse2Json, parse2String, flattenJson } from './core/parser';
+import {parse2Json, parse2String, flattenJson, CheckError } from './core/parser';
 import ToggleButton from "./comp/toggleButton";
 
-const KEYWORDS = ["name", "data", "wave", "width", "scale"];
+const KEYWORDS = ["name", "data", "wave", "width", "scale", "color"];
 
 function App() {
 
@@ -123,6 +123,7 @@ function App() {
     try {
       const jsonObj = parse2Json(editorRef.current.innerText); // convert to JSON array
       const flatSignals = flattenJson(jsonObj); // flatten the JSON array
+      CheckError(flatSignals);
       SetSignals(jsonObj); // Only if valid
       setText(parse2String(signals));
       setFlatSignals(flatSignals);
@@ -387,7 +388,7 @@ function App() {
         <div id="banner">
           <img src={logo} className="App-logo" alt="logo" />
           <h1>WaveReact</h1>
-          <ToggleButton onChange={(v)=>{v === true ? setViewMode(0) : setViewMode(1)}} size="sm" labels={["☀️","🌙"]} />
+          <ToggleButton onChange={(v)=>{v === true ? setViewMode(0) : setViewMode(1)}} size="sm" />
           <h2>                .</h2>
         </div>
         {/* The OUTPUT of the app. Signal and it's names */}
@@ -473,7 +474,7 @@ function App() {
 
         {/* UI elements holder */}
         <div id="ui-panel"  style={{ background : viewMode ? '#bdbdbd' : '#20242cff'  }}>
-          <CollapsibleTab></CollapsibleTab>
+          <CollapsibleTab viewMode={viewMode}></CollapsibleTab>
           <div className='control-group'>
             <svg height="20" width="75">
               <rect x="0" y="0" height="10" width="75" style={error === null ? indicatorGood : indicatorBad} strokeWidth="0" />

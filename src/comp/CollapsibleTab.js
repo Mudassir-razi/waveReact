@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const CollapsibleRightTab = () => {
+const CollapsibleRightTab = (viewMode) => {
   const [isOpen, setIsOpen] = useState(false);
   const panelWidth = 450;
 
@@ -39,7 +39,7 @@ const CollapsibleRightTab = () => {
           width: `${panelWidth}px`,
           transform: isOpen ? 'translateX(0)' : `translateX(${panelWidth}px)`,
           transition: 'transform 0.3s ease',
-          backgroundColor: '#f1f1f1',
+          backgroundColor: (viewMode ? '#f1f1f1' : '#2f3338'),
           border: '0px',
           borderRight: 'none',
           overflow: 'hidden',
@@ -52,13 +52,13 @@ const CollapsibleRightTab = () => {
           fontFamily:'monospace',
         }}
       >
-        <p>1. Add new button to add new signals.</p>
-        <p>2. You can change the tab names (try double click).</p>
-        <p>3. The green box over the add new button? turns RED if you enter incorrect code.</p>
+        <p>1. Valid ignal properties are- <span className='highlight'>name, wave, data, width, scale, color</span> </p>
+        <p>2. Valid wave bits are- <span className='highlight'>1 0 . h H l L p P n N = |</span> and color codes</p>
+        <p>3. Color codes are- r g b a m o v y.</p>
         <p>4. Group waves using ["groupName", wave1, wave2]. Nested group is also supported.</p>
-        <p>5. use (pattern, count) to repeat. Ex- =(10, 3) -> =101010 This works in both wave and data.</p>
-        <p>6. use uc|dc(baseValue, count) for up and down count. uc(5,5) -> 5 6 7 8 9 WOrks only in data.</p>
-        <p>7. Color codes are- r g b a m o v y.</p>
+        <p>5. use (pattern, count) to repeat. Ex- "=(10, 3)" -> "=101010" This works in wave property</p>
+        <p>6. use ud/ux/ub/dd/dx/db(baseValue, count) or (baseValue, count, interval) for up and down count in decimal, hex or binary. Ex- "ux(5,5)" -> "5 6 7 8 9". Works in data property</p>
+        <p>7. The green box over the add new button? turns RED if you enter incorrect code.</p>
       </div>
     </div>
   );
