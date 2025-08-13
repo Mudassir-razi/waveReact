@@ -155,7 +155,7 @@ function App() {
     combineAndSaveSVG(document.getElementById("mainLayer"),
       document.getElementById("grid"),
       document.getElementById("nameList"),
-      canvasConfig.offsetX, tabs[selectionTab].name,
+      tabs[selectionTab].name,
       viewMode);
   }
 
@@ -198,6 +198,27 @@ function App() {
     const newTab = { name: "tab " + tabs.length, signals: [] };
     setSelectionIndex(0);
     setTabs(prev => [...prev, newTab]);
+  }
+
+  const handleTabDelete= (e) => {
+    let userConfirmed = window.confirm(`Are you sure you want to delete "${tabs[selectionTab].name}" tab?`);
+
+    if (!userConfirmed) return ;
+
+    const updatedTabs = tabs.filter((_, i) => i !== selectionTab);
+    const updatedTabIndex = selectionTab - 1 < 0 ? 0 : selectionTab - 1;
+    setTabs(updatedTabs);
+    setSelectionIndex(updatedTabIndex);
+
+    //now load new data from next tab
+    const flatSignals = flattenJson(updatedTabs[updatedTabIndex].signals);
+    setSelectionIndex(0);
+    SetSignals(updatedTabs[updatedTabIndex].signals);
+    setFlatSignals(flatSignals);
+    setText(parse2String(updatedTabs[updatedTabIndex].signals));
+    editorRef.current.innerHTML = highlightKeywords(parse2String(updatedTabs[updatedTabIndex].signals));
+    setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(updatedTabs[updatedTabIndex].signals), timeStamp: maxTimeStamp(flatSignals), signalCount: flatSignals.length}));
+    
   }
 
   //TODO....................../////////////////////////////////////////////////...............
@@ -445,6 +466,7 @@ function App() {
                   offsetY={canvasConfig.offsetY}
                   timeStamp={canvasConfig.timeStamp}
                   signalCount={canvasConfig.signalCount}
+                  viewMode={viewMode}
                 />
 
                 <SignalWindow
@@ -523,7 +545,7 @@ function App() {
         </div>
         {/* Tab panel */}
         
-        <TabBar tabs={tabs} selectionIndex={selectionTab} onAddDown={handlerAddTab} onSave={handlerTabNameChange} onClick={handerlTabClick} />
+        <TabBar tabs={tabs} selectionIndex={selectionTab} onAddDown={handlerAddTab} onSave={handlerTabNameChange} onClick={handerlTabClick} onDelete={handleTabDelete}/>
 
       </div>
     </div>

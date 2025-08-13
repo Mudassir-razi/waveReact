@@ -27,7 +27,7 @@ export function combineAndSaveSVG(signalSvg, gridSvg, nameSvg, filename = 'combi
   bgRect.setAttribute("y", 0);
   bgRect.setAttribute("width", totalWidth);
   bgRect.setAttribute("height", gridHeight);
-  bgRect.setAttribute("fill", viewMode ? "black" : "white");
+  bgRect.setAttribute("fill", viewMode === 1 ? "white" : "black");
 
   // Helper: clone and translate group
   function cloneGroup(sourceSvg, offsetX = 0) {

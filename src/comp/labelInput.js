@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const EditableLabel = ({
   id,
@@ -14,6 +14,11 @@ const EditableLabel = ({
   const [inputValue, setInputValue] = useState(text);
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+
+  // ✅ Sync local input state with prop changes
+  useEffect(() => {
+    setInputValue(text);
+  }, [text]);
 
   const handleLabelClick = () => {
     onClick(id);
@@ -54,7 +59,6 @@ const EditableLabel = ({
     setShowContextMenu(false);
   };
 
-  // Common styles for both label and input to prevent height changes
   const commonStyles = {
     display: 'inline-block',
     padding: '4px 8px',
@@ -81,12 +85,11 @@ const EditableLabel = ({
           style={{
             ...commonStyles,
             textAlign: 'left',
-            width: `${Math.max(inputValue.length * 8, 50)}px`, // Dynamic width based on content
+            width: `${Math.max(inputValue.length * 8, 50)}px`,
           }}
         />
       ) : (
         <label
-          key={id}
           onClick={handleLabelClick}
           onDoubleClick={handleLabelDoubleClick}
           onContextMenu={handleContextMenu}

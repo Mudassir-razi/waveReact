@@ -30,7 +30,7 @@ export default function ToggleButton({
   const trackStyle = {
     width: `${s.trackW}px`,
     height: `${s.trackH}px`,
-    backgroundColor: checked ? "#2b384dff" : "#8b8b8bff",
+    backgroundColor: checked ? "#2b384dff" : "#575d64ff",
     borderRadius: 15,//`${s.trackH / 2}px`,
     position: "relative",
     transition: "background-color 0.2s ease-in-out",
@@ -43,7 +43,7 @@ export default function ToggleButton({
     backgroundColor: "transparent",
     borderRadius: "5%",
     position: "absolute",
-    top: "50%",
+    top: "45%",
     left: checked ? `${s.trackW - s.knob - 2}px` : "2px",
     transform: "translateY(-50%)",
     boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
@@ -51,6 +51,7 @@ export default function ToggleButton({
   };
 
   const buttonStyle = {
+    padding: 10,
     display: "inline-flex",
     alignItems: "center",
     gap: labels ? "8px" : "0px",
@@ -75,7 +76,7 @@ export default function ToggleButton({
         </span>
       )}
       <span style={trackStyle}>
-        <span style={knobStyle}>{checked ? "☀️":"🌙"}</span>
+        <span style={knobStyle}>{checked ? "🌒" : "🌔"}</span>
       </span>
     </button>
   );

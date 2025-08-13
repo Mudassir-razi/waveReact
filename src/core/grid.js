@@ -2,7 +2,7 @@
 import { settings } from "./config.js";
 import { useEffect, useRef } from "react";
 
-export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetX, offsetY, timeStamp, signalCount}){
+export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetX, offsetY, timeStamp, signalCount, viewMode}){
 
     const BGcanvasRef = useRef(null);
     
@@ -20,8 +20,8 @@ export default function Grid({dx, dy, mouse, prevMouse, dragging, offsetX, offse
             y1={0.5}
             x2={x + 0.5}
             y2={signalCount * (dy + offsetY) + 0.5}
-            stroke="gray"
-            strokeOpacity={0.25}
+            stroke={viewMode ? "grey" : "lightgrey"}
+            strokeOpacity={0.4}
             strokeWidth={1}
             strokeDasharray="4 4"
             pointerEvents="none"
