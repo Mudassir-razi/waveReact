@@ -47,6 +47,7 @@ html, body {
     flex-direction: row;
     box-sizing: border-box;
     background-color: #13171d;
+    font-size: 10px;
   }
   
   /* The output panel has canvas and signal names*/
@@ -98,7 +99,9 @@ html, body {
     display: flex;
     width : 95%;
     flex-direction: column;
-    color: rgb(0, 0, 0);;
+    color: rgb(0, 0, 0);
+    font-size: 18px;
+    font-family: 'Courier New', Courier, monospace;
   }
   
   .signal-label{
@@ -138,7 +141,7 @@ html, body {
     color: #ffffff;
     cursor: pointer;
     font-family: monospace;
-    font-size: 10px;
+    font-size: 15px;
     width: 100%;
     height: 26px;
     text-align: center;
