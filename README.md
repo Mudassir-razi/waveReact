@@ -1,46 +1,14 @@
-# Getting Started with Create React App
+<h1>WaveReact</h1>
+WaveReact is a react based web app to draw digital waveforms using JSON like data structure. It's identical to wavedrom editor, which is absoulutely great, but lacks certain feature. WaveReact tries to overcome those lackings. 
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Some additional features available in WaveReact are-
+*More flexibility: you can change the color, line width of your waves, super essential when dealing with a crowd of signals. 
+*Keep tracking: Signal names don't fly off when the waveforms are enormous. They tend to stick on one place, in front of you. Cause They love you!
+*Patterns: Don't want to write counter values like 0,1,3.. ? you can add a counter string like ud(1,5) and it'll count from 1, five times incrementing 1 in decimal. You can specify the increment like ud(1,5,3). Now it's 1 4 7 10 13. Want it in Hex? use ux. Same parameters. 
+*Reapetiting waves: Have some common pattern in waves? add them like ('pattern', repetition). No string concatenation or anything. 
+*Auto-formatting: Well, try it out. You'll like it. It alings the key parameters vertically so they look nice (aesthetic, dude!).
+*Tabs: Tabs are essesntial. You can now have all the signals of a project in one single window, one file. Neat.
+*Dark mode: A treat for your eyes. You're welcome. 
 
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+Need I go more?
+:)
