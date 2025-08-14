@@ -454,7 +454,6 @@ function App() {
                   style={{
                     position: 'absolute',
                     top: 0,
-                    left: canvasConfig.offsetX,
                     zIndex: 1
                   }}
                   dx={canvasConfig.dx}
@@ -473,7 +472,6 @@ function App() {
                   style={{
                     position: 'absolute',
                     top: 0,
-                    left: canvasConfig.offsetX,
                     zIndex: 2
                   }}
                   signals={flatSignals}

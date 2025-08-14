@@ -26,7 +26,7 @@ export default function SignalNameDiv({ signals, dy, offsetY, viewMode }) {
     const maxLevel = calculateMaxLevel(signals);
     const maxNameLength = calculateMaxNameLength(signals);
     const totalHeight = calculateHeight(signals) + topOffset;
-    const totalWidth = baseX + maxLevel * indentPerLevel + maxNameLength * 9;
+    const totalWidth = baseX + maxLevel * indentPerLevel + maxNameLength + 20;
 
     // Render items recursively
     const renderItems = (items, level = 0, startY = topOffset) => {
@@ -95,12 +95,13 @@ export default function SignalNameDiv({ signals, dy, offsetY, viewMode }) {
             //If it's a JSON object
             else if (Object.keys(item).includes('name')) {
                 const maxLevel = calculateMaxLevel(signals);
-                const signalX = baseX + maxLevel * indentPerLevel + bracketWidth + maxNameLength*7; // fixed column for all signals
+                const signalX = baseX + maxLevel * indentPerLevel + maxNameLength + 20; // fixed column for all signals
 
                 elements.push(
                     <text
                         key={`signal-${level}-${index}`}
                         className="signal-label"
+                        left= {0}
                         x={signalX}
                         y={currentY + dy / 2}
                         textAnchor="end"
@@ -139,7 +140,9 @@ export default function SignalNameDiv({ signals, dy, offsetY, viewMode }) {
 
 export function GetNameSVGWidth(signals)
 {
-    const value = baseX + calculateMaxLevel(signals) * indentPerLevel + calculateMaxNameLength(signals) * 12 + 10;
+    const maxLevel = calculateMaxLevel(signals);
+    console.log("Max Level : ", maxLevel);
+    const value = baseX + calculateMaxLevel(signals) * indentPerLevel + calculateMaxNameLength(signals) + 20;
 //      const totalWidth = baseX + maxLevel * indentPerLevel + maxNameLength * 9;
     return value;
 }
@@ -156,7 +159,7 @@ const calculateMaxNameLength = (items, maxLength = 0) => {
         }
 
     });
-    return maxLength;
+    return  maxLength * 8.367 - 1.09;
 };
 
 // Calculate max nesting level for width
