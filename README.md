@@ -12,3 +12,8 @@ Some additional features available in WaveReact are-
 
 Need I go more?
 :)
+
+Visit: https://mudassir-razi.github.io/waveReact/
+
+
+Feedback: mudassirrazi@gmail.com
