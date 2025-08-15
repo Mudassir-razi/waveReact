@@ -117,6 +117,13 @@ html, body {
     padding-right: 0px;
   }
 
+  ul{
+    color: rgb(0, 0, 0);
+    font-size: 16px;
+    font-family: 'Courier New', Courier, monospace;
+    margin-left: 10px;
+  }
+
   h1{
     color: white;
     font-size: 28px;

@@ -15,6 +15,7 @@ import ToggleButton from "./comp/toggleButton";
 
 const KEYWORDS = ["name", "data", "wave", "width", "scale", "color"];
 
+
 function App() {
 
   //!................................STATES...................................................
@@ -56,6 +57,8 @@ function App() {
   //dark mode
   const [viewMode, setViewMode] = useState(1);  //by default 1. light mode
 
+  //Fun stuf for tab deletion
+  const [delTime, setDelTime] = useState(0);
   //  mouse position
   const [mousePos, setMousePos] = useState([0, 0]);
   const [prevMousePos, setPrevMousePos] = useState([0, 0]);
@@ -201,9 +204,24 @@ function App() {
   }
 
   const handleTabDelete= (e) => {
+    
+    //Not at all necessary for the functionality. Just added it for fun
+    if (tabs.length <= 1)
+    {
+      const uDelTime = delTime + 1;
+      if(uDelTime >= 10)
+      {
+        window.alert(phrases[Math.floor(Math.random() * phrases.length)]);
+        setDelTime(0);
+        return;
+      }
+      setDelTime(uDelTime);
+      return;
+    }
     let userConfirmed = window.confirm(`Are you sure you want to delete "${tabs[selectionTab].name}" tab?`);
 
     if (!userConfirmed) return ;
+    
 
     const updatedTabs = tabs.filter((_, i) => i !== selectionTab);
     const updatedTabIndex = selectionTab - 1 < 0 ? 0 : selectionTab - 1;
@@ -580,3 +598,23 @@ const indicatorBad = {
   filter: "drop-shadow(0 0 6px red)",
   transition: "filter 0.3s ease, fill 0.3s ease, stroke 0.3s ease",
 };
+
+
+//Dont delete, if you do, John will come for you
+const phrases = [
+      "Deleting tabs won’t erase your mistakes.",
+      "You can’t fire the last tab… it knows too much.",
+      "This tab is the chosen one. It stays.",
+      "Careful… you’re about to break the space-time continuum.",
+      "Last tab standing — undefeated since forever.",
+      "Nice try, but this tab pays the rent.",
+      "Remove me and chaos will reign.",
+      "What did the last tab ever do to you?",
+      "This is not the Jedi delete you’re looking for.",
+      "If you delete me, I delete you. Just kidding… or am I?",
+      "The prophecy forbids removing the final tab.",
+      "Tab lives matter. Especially the last one.",
+      "Deleting me will unleash the squirrels.",
+      "Last tab? More like the boss level.",
+      "End of the line, tab terminator."
+];

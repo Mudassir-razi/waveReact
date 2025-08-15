@@ -1,9 +1,9 @@
-import React from 'react';
+import { flattenJson } from "../core/parser";
 
 // Configurable top offset for SVG content
 const topOffset = 10; // Adjust this value to change the top padding of the SVG
 const baseX = 20; // Base X position for rendering
-const indentPerLevel = 20; // Indentation per nesting level
+const indentPerLevel = 15; // Indentation per nesting level
 const bracketWidth = 10; // Width of the bracket
 
 export default function SignalNameDiv({ signals, dy, offsetY, viewMode }) {
@@ -26,7 +26,7 @@ export default function SignalNameDiv({ signals, dy, offsetY, viewMode }) {
     const maxLevel = calculateMaxLevel(signals);
     const maxNameLength = calculateMaxNameLength(signals);
     const totalHeight = calculateHeight(signals) + topOffset;
-    const totalWidth = baseX + maxLevel * indentPerLevel + maxNameLength + 20;
+    const totalWidth = baseX + maxLevel * indentPerLevel + maxNameLength + 30;
 
     // Render items recursively
     const renderItems = (items, level = 0, startY = topOffset) => {
@@ -141,23 +141,22 @@ export default function SignalNameDiv({ signals, dy, offsetY, viewMode }) {
 export function GetNameSVGWidth(signals)
 {
     const maxLevel = calculateMaxLevel(signals);
-    console.log("Max Level : ", maxLevel);
-    const value = baseX + calculateMaxLevel(signals) * indentPerLevel + calculateMaxNameLength(signals) + 20;
+    const maxNameLength = calculateMaxNameLength(signals);
+    console.log("Max Level : ", maxLevel, " Max Name Length : ", maxNameLength, " BaseX : ", baseX);
+    const value = baseX + maxLevel * indentPerLevel + maxNameLength + 30;
 //      const totalWidth = baseX + maxLevel * indentPerLevel + maxNameLength * 9;
     return value;
 }
 
 
 // Calculate max name length for width adjustment
-const calculateMaxNameLength = (items, maxLength = 0) => {
-    items.forEach(item => {
-        if (Array.isArray(item)) {
-            maxLength = Math.max(maxLength, item[0].length); // Group name
-            maxLength = calculateMaxNameLength(item.slice(1), maxLength); // Children
-        } else if (Object.keys(item).includes('name')) {
-            maxLength = Math.max(maxLength, item.name.length);
+const calculateMaxNameLength = (items) => {
+    const flatSignals = flattenJson(items);
+    var maxLength = 0;
+    flatSignals.forEach(signal => {
+        if (signal.name && signal.name.length > maxLength) {
+            maxLength = signal.name.length;
         }
-
     });
     return  maxLength * 8.367 - 1.09;
 };
