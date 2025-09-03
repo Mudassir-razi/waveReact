@@ -5,7 +5,7 @@
  * @param {svg} nameSvg -SVG component that holds the names of the signals 
  * @param {string} filename -Output filename 
  */
-export function combineAndSaveSVG(signalSvg, gridSvg, nameSvg, filename = 'combined.svg', viewMode) {
+export function combineAndSaveSVG(signalSvg, gridSvg, nameSvg, filename = 'combined.svg', viewMode, format="svg") {
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   // Extract widths and height
@@ -27,6 +27,7 @@ export function combineAndSaveSVG(signalSvg, gridSvg, nameSvg, filename = 'combi
   bgRect.setAttribute("y", 0);
   bgRect.setAttribute("width", totalWidth);
   bgRect.setAttribute("height", gridHeight);
+  
   bgRect.setAttribute("fill", viewMode === 1 ? "white" : "black");
 
   // Helper: clone and translate group
@@ -68,16 +69,46 @@ export function combineAndSaveSVG(signalSvg, gridSvg, nameSvg, filename = 'combi
   // Serialize and download
   const serializer = new XMLSerializer();
   const svgString = serializer.serializeToString(combinedSVG);
-  const blob = new Blob([svgString], { type: 'image/svg+xml' });
 
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+
+  if (format === "svg") {
+    // Download as SVG
+    const blob = new Blob([svgString], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+  } else if (format === "png") {
+    // Convert to PNG using a canvas
+    const img = new Image();
+    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    img.onload = function () {
+      const canvas = document.createElement("canvas");
+      canvas.width = totalWidth;
+      canvas.height = gridHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+
+      canvas.toBlob((blob) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `${filename}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }, "image/png");
+
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  }
 }
 
 /**

@@ -640,19 +640,19 @@ function getBreak(p1, p2, offsetX, offsetY, viewMode = 1) {
 
     const points =
     [
-      {x : midX - 7, y : midY + 13},
-      {x : midX - 5, y : midY + 15},
-      {x : midX - 3, y : midY + 14},
-      {x : midX - 1, y : midY + 12},
+      //{x : midX - 7, y : midY + 13},
+      //{x : midX - 5, y : midY + 15},
+      {x : midX - 3, y : midY + 15},
+      //{x : midX - 1, y : midY + 12},
           
-      {x : midX, y : midY},
-      {x : midX + 1, y : midY - 12},
-      {x : midX + 3, y : midY - 14},
-      {x : midX + 5, y : midY - 15},
-      {x : midX + 7, y : midY - 13},
+      //{x : midX, y : midY},
+      //{x : midX + 1, y : midY - 12},
+      //{x : midX + 3, y : midY - 14},
+      {x : midX + 1, y : midY - 15},
+      //{x : midX + 7, y : midY - 13},
     ];
 
-    const points2= [...points].reverse().map(p => ({ x: p.x + 5, y: p.y }));
+    const points2= [...points].reverse().map(p => ({ x: p.x + 5, y: p.y - 1}));
     // [
     //   {x : midX + 8, y : midY - 13},
     //   {x : midX + 6, y : midY - 15},

@@ -159,7 +159,17 @@ function App() {
       document.getElementById("grid"),
       document.getElementById("nameList"),
       tabs[selectionTab].name,
-      viewMode);
+      viewMode, "svg");
+  }
+
+  //Save SVG
+  const handleSavePNG = () => {
+    combineAndSaveSVG(document.getElementById("mainLayer"),
+      document.getElementById("grid"),
+      document.getElementById("nameList"),
+      tabs[selectionTab].name,
+      viewMode,
+      "png");
   }
 
   //tab switching handler
@@ -520,7 +530,8 @@ function App() {
             <button className='button-5' onClick={handlerAddbutton}> Add new </button>
             <button className='button-5' onClick={handleCodeFormat}>Auto-format</button>
             <button className='button-5' onClick={handleSaveFile}>Save file</button>
-            <button className='button-5' onClick={handleSaveSVG}>Save SVG</button>
+            <button className='button-5' onClick={handleSaveSVG}>Save SVG</button>            
+            <button className='button-5' onClick={handleSavePNG}>Save PNG</button>
             <button className='button-5' onClick={handleOpenFile}>Open file</button>
           </div>
           <div className='control-editor-group'>
