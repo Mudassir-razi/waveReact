@@ -28,7 +28,7 @@ export default function SignalWindow({signals, dx, dy, timeStamp, signalCount, o
   useEffect(()=>{
     const mainCanvas = signalWindowRef.current;
     renderAllSignals(mainCanvas, signals, dx, dy, offsetY, viewMode);
-  }, [signals, dx, dy, offsetX, offsetY, timeStamp, signalCount, onDown, onMove, onUp]);
+  }, [signals, dx, dy, offsetX, offsetY, timeStamp, signalCount, onDown, onMove, onUp, viewMode]);
 
 
   return(
@@ -199,20 +199,22 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
     //For clock negative edge
     else if( current === 'n' || current === 'N')
     {
+      compare = (prev === '.' || prev === '|')? last : prev;
       points += getWave('n', i * dx , idx * (dy+offsetY), LUT);
-      if(current === 'N')extras.push(getArrorw(LUT[0], LUT[5], i * dx, idx * (dy+offsetY), 8, viewMode));
       if(Object.keys(busColorScheme).includes(compare)) 
       {
-        shapes += getWave('busL', i * dx , idx * (dy+offsetY), LUT);
+        shapes += getWave('busH', i * dx , idx * (dy+offsetY), LUT);
         busShapes.push(shapes);
       }
       shapeStarted = false;
+      if(current === 'N')extras.push(getArrorw(LUT[0], LUT[5], i * dx, idx * (dy+offsetY), 8, viewMode));
       last = current;
     }
 
     //for HIGH edge
     else if( current === 'h' || current === 'H')
     {
+      compare = (prev === '.' || prev === '|')? last : prev;
       points += getWave('h', i * dx , idx * (dy+offsetY), LUT);
       if(Object.keys(busColorScheme).includes(compare)) 
       {
@@ -227,6 +229,7 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
     //For LOW edge
     else if( current === 'l' || current === 'L')
     {
+      compare = (prev === '.' || prev === '|')? last : prev;
       points += getWave('l', i * dx , idx * (dy+offsetY), LUT);
       if(Object.keys(busColorScheme).includes(compare)) 
       {
