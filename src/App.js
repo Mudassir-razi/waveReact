@@ -539,7 +539,7 @@ function App() {
               ref={editorRef}
               contentEditable
               spellCheck={false}
-            
+              id={SignalInput}
               onInput={handlerSignalCodeInput}
               onKeyDown={(e) => {
                 if (e.key === "Tab") {
