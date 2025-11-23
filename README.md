@@ -10,7 +10,6 @@ Some additional features available in WaveReact are-
 * Tabs: Tabs are essesntial. You can now have all the signals of a project in one single window, one file. Neat.
 * Dark mode: A treat for your eyes. You're welcome. 
 
-Need I go more?
 :)
 
 Visit: https://mudassir-razi.github.io/waveReact/
