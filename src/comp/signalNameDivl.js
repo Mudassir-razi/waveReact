@@ -126,7 +126,7 @@ export default function SignalNameDiv({ signals, dy, offsetY, viewMode }) {
             id="nameList"
             width={totalWidth}
             height={totalHeight}
-            style={{ position: "absolute", top: 0, left: 0, zIndex: 3}}
+            style={{ position: "absolute", top: 10, left: 0, zIndex: 3}}
         >
             <rect 
                 width={totalWidth}

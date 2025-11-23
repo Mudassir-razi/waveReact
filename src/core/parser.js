@@ -17,10 +17,6 @@ export function parse2Json(str) {
       throw new Error("Parsed result is not an array.");
     }
 
-    if(CheckError(flattenJson(result))) {
-      throw new Error("Parsed does not contain valid keys");
-    }
-
     return result;
   } catch (err) {
     throw new Error("Failed to parse object array: " + err.message);

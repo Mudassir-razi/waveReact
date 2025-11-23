@@ -1,6 +1,7 @@
 import logo from './logo.svg';
 import './App.css';
 import './comp/button';
+import './comp/Editor';
 import Grid from './core/grid';
 import {useState, useRef, useEffect} from 'react';
 import SignalWindow from './core/signal';
@@ -12,9 +13,7 @@ import CollapsibleTab from './comp/CollapsibleTab';
 import {combineAndSaveSVG, openJSONFile, saveJSONFile} from './core/fileSys';
 import {parse2Json, parse2String, flattenJson, CheckError } from './core/parser';
 import ToggleButton from "./comp/toggleButton";
-
-const KEYWORDS = ["name", "data", "wave", "width", "scale", "color"];
-
+import SignalEditor from './comp/Editor';
 
 function App() {
 
@@ -31,25 +30,25 @@ function App() {
     bgColor: "#000000",
     gridColor: "#FFFFFF"
   });
-
+ 
   //tab data
-  const [tabs, setTabs] = useState([{ name: "tab 0", signals: [] }]);
+  const [tabs, setTabs] = useState([{ name: "tab 0", signals: [], annotations: [] }]);
 
   //Signal data
   const [signals, SetSignals] = useState([]);
+
+  //annotationMode data
+  const[annotation, setAnnotation] = useState([]);
+
+  //current annotation coordinates
+  const[annoCoord, setAnnoCoord] = useState({ text : "time", type : "<-", startX : 0, endX : 0, head : 0, foot : 0, startOffset : 0, endOffset : 0});
 
   //Flattened signals, for the renderer to use easily.
   //Omits the tree structure and only keeps the signal list.
   const [flatSignals, setFlatSignals] = useState([]);
 
-  //signal text for display
-  const [text, setText] = useState(parse2String(signals));
-
   //Error parsing
   const [error, setError] = useState(null);
-
-  //selected items
-  const [selectionIndex, setSelectionIndex] = useState(-1);
 
   //selected tab
   const [selectionTab, setSelectionTab] = useState(0);
@@ -57,36 +56,39 @@ function App() {
   //dark mode
   const [viewMode, setViewMode] = useState(1);  //by default 1. light mode
 
+  //annotationMode mode
+  const[annotationMode, setAnnotationMode] = useState(0);
+
   //Fun stuf for tab deletion
   const [delTime, setDelTime] = useState(0);
   //  mouse position
   const [mousePos, setMousePos] = useState([0, 0]);
-  const [prevMousePos, setPrevMousePos] = useState([0, 0]);
+  const [cursorState, setCursorState] = useState(0);
   const [isDragging, setIsDraggin] = useState(false);
+  
   const editorRef = useRef(null);
-
-  useEffect(() => {
-    editorRef.current.innerHTML = highlightKeywords(editorRef.current.innerText);
-  }, []);
-
+  const suppressChange = useRef(false);
+  
   //!................................ EVENT HANDLERS for BUTTONS ............................................
   //Adds new signal
   const handlerAddbutton = () => {
+
+    //If annotation mode, no signal adding
+    if(annotationMode)return;
     var randomSignal = '0.';
-    const newItem = { name: 'Signal_' + signals.length, wave: randomSignal, data: '', width: 1 };
+    const newItem = { name: 'Signal_' + signals.length, wave: randomSignal, data: '', width: 1, phase : 0 };
     const updatedSignal = [...signals, newItem];
     const updatedFlatSignals = flattenJson(updatedSignal);
 
     SetSignals(prev => [...prev, newItem]);
     setFlatSignals(updatedFlatSignals);
-    setText(parse2String(updatedSignal));
-    editorRef.current.innerHTML = highlightKeywords(parse2String(updatedSignal));
+    editorRef.current.setValue(parse2String(updatedSignal));
     setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(updatedSignal), timeStamp: maxTimeStamp(updatedFlatSignals), signalCount: updatedFlatSignals.length + 1 }));
 
     //updates tab information
     const updatedTab = tabs.map((tab, i) => {
       if (i === selectionTab) {
-        return { name: tabs[i].name, signals: updatedSignal };
+        return { name: tabs[i].name, signals: updatedSignal, annotations: tab.annotations };
       }
       else return tab;
     });
@@ -96,7 +98,8 @@ function App() {
   //Auto-format code
   const handleCodeFormat = () => {
     try {
-      editorRef.current.innerHTML = highlightKeywords(parse2String(signals));
+      if(annotationMode === 1)return;
+      editorRef.current.setValue(parse2String(signals));
       setError(null);
     } catch (e) {
       setError("Failed to format: " + e.message);
@@ -111,37 +114,58 @@ function App() {
         setTabs(data);
         setSelectionTab(0);
         SetSignals(data[0].signals);
-        setSelectionIndex(0);
         const flatSignals = flattenJson(data[0].signals);
         setFlatSignals(flatSignals);
-        editorRef.current.innerHTML = highlightKeywords(parse2String(data[0].signals));
+        editorRef.current.setValue(parse2String(data[0].signals));
       })
       .catch(err => {
         alert(err.message);
       });
   }
 
+  const handleModeToggle = () => {
+    suppressChange.current = true;
+    if(annotationMode === 0)editorRef.current.setValue(parse2String(tabs[selectionTab].annotations));
+    else editorRef.current.setValue(parse2String(tabs[selectionTab].signals));
+    suppressChange.current = false;
+    setAnnotationMode(annotationMode === 0 ? 1 : 0);
+  }
+
   //Takes the text editor text input and tries to parse it into JSON object
-  const handlerSignalCodeInput = (newText) => {
+  const handlerSignalCodeInput = () => {
+    if (suppressChange.current) return;
     try {
-      const jsonObj = parse2Json(editorRef.current.innerText); // convert to JSON array
-      const flatSignals = flattenJson(jsonObj); // flatten the JSON array
-      CheckError(flatSignals);
-      SetSignals(jsonObj); // Only if valid
-      setText(parse2String(signals));
-      setFlatSignals(flatSignals);
-      setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(jsonObj), timeStamp: maxTimeStamp(flatSignals), signalCount: flatSignals.length }));
+      if(annotationMode === 0){
+        const jsonObj = parse2Json(editorRef.current.getValue()); // convert to JSON array
+        const flatSignals = flattenJson(jsonObj); // flatten the JSON array
+        //CheckError(flatSignals);
+        SetSignals(jsonObj); // Only if valid
+        setFlatSignals(flatSignals);
+        setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(jsonObj), timeStamp: maxTimeStamp(flatSignals), signalCount: flatSignals.length }));
 
-      //update tab information
-      const updatedTab = tabs.map((tab, i) => {
-        if (i === selectionTab) {
-          return { name: tabs[i].name, signals: jsonObj };
-        }
-        else return tab;
-      });
-      setTabs(updatedTab);
-
-      setError(null);
+        //update tab information
+        const updatedTab = tabs.map((tab, i) => {
+          if (i === selectionTab) {
+            return { name: tabs[i].name, signals: jsonObj, annotations: tabs[i].annotations };
+          }
+          else return tab;
+        });
+        setTabs(updatedTab);
+        setError(null);
+      }
+      else 
+      {
+        const jsonObj = parse2Json(editorRef.current.getValue());
+        setAnnotation(jsonObj);
+        //update tab information
+        const updatedTab = tabs.map((tab, i) => {
+          if (i === selectionTab) {
+            return { name: tab.name, signals: tab.signals, annotations: jsonObj };
+          }
+          else return tab;
+        });
+        setTabs(updatedTab);
+      }
     } catch (e) {
       console.log(e.message);
       setError("Invalid format");
@@ -174,25 +198,16 @@ function App() {
 
   //tab switching handler
   const handerlTabClick = (e) => {
-    //we push current data to the current tab
-    //and then load data from the next tab
-
-    const updatedTab = tabs.map((tab, i) => {
-      if (i === selectionTab) {
-        return { name: tabs[i].name, signals: signals };
-      }
-      else return tab;
-    });
-    setTabs(updatedTab);
-
     //now load new data from next tab
     const flatSignals = flattenJson(tabs[e].signals);
-    setSelectionIndex(0);
     setSelectionTab(e);
     SetSignals(tabs[e].signals);
     setFlatSignals(flatSignals);
-    setText(parse2String(tabs[e].signals));
-    editorRef.current.innerHTML = highlightKeywords(parse2String(tabs[e].signals));
+    setAnnotationMode(0);
+    setAnnotation(tabs[e].annotations);
+    suppressChange.current = true;
+    editorRef.current.setValue(parse2String(tabs[e].signals));
+    suppressChange.current = false;
     setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(tabs[e].signals), timeStamp: maxTimeStamp(flatSignals), signalCount: flatSignals.length}));
   }
 
@@ -208,8 +223,7 @@ function App() {
   //Adds a new tab
   const handlerAddTab = (e) => {
 
-    const newTab = { name: "tab " + tabs.length, signals: [] };
-    setSelectionIndex(0);
+    const newTab = { name: "tab " + tabs.length, signals: [{ name: 'Signal_' + signals.length, wave: "0..", data: '', width: 1, phase : 0 }], annotations: [] };
     setTabs(prev => [...prev, newTab]);
   }
 
@@ -236,194 +250,74 @@ function App() {
     const updatedTabs = tabs.filter((_, i) => i !== selectionTab);
     const updatedTabIndex = selectionTab - 1 < 0 ? 0 : selectionTab - 1;
     setTabs(updatedTabs);
-    setSelectionIndex(updatedTabIndex);
 
     //now load new data from next tab
     const flatSignals = flattenJson(updatedTabs[updatedTabIndex].signals);
-    setSelectionIndex(0);
+
     SetSignals(updatedTabs[updatedTabIndex].signals);
     setFlatSignals(flatSignals);
-    setText(parse2String(updatedTabs[updatedTabIndex].signals));
-    editorRef.current.innerHTML = highlightKeywords(parse2String(updatedTabs[updatedTabIndex].signals));
+    editorRef.current.setValue(parse2String(updatedTabs[updatedTabIndex].signals));
     setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(updatedTabs[updatedTabIndex].signals), timeStamp: maxTimeStamp(flatSignals), signalCount: flatSignals.length}));
     
   }
 
   //TODO....................../////////////////////////////////////////////////...............
   //
-  //TODO...........................................DEPCRECATED......................................
-  //TODO................................NO MORE MOUSE CONTROL SUPPORT...............................
   //Mouse control
   //Handle mouse down on main canvas
   const handlerMouseDownMain = (e) => {
-    console.log("mouse down at " + e.x + " " + e.y);
+    if(annotationMode === 0)return;
     //getting the first mouse click
-    var newMousePos = [...prevMousePos];
+    var newMousePos = [0, 0];
     newMousePos[0] = e.x;
     newMousePos[1] = e.y;
-    setPrevMousePos(newMousePos);
+    setMousePos(newMousePos);
     if (e.y < canvasConfig.signalCount) setIsDraggin(true);
-  };
-  //mouse move
-  const handlerMouseMoveMain = (e) => {
-    var newMousePos = [...mousePos];
-    newMousePos[0] = e.x;
-    newMousePos[1] = e.y;
-    //we only update if there is a change
-    if (newMousePos[0] !== mousePos[0] || newMousePos[1] !== mousePos[1]) setMousePos(newMousePos);
-  }
-  //mouse up
-  const handlerMouseUpMain = (e) => {
-    setIsDraggin(false);
-    if (e.y >= signals.length) return;
-    console.log("Mouse up");
-    var updatedSignal = signals[e.y];
-    setSelectionIndex(e.y);
-    const distance = Math.sqrt(Math.pow(e.x - prevMousePos[0], 2) + Math.pow(e.y - prevMousePos[1], 2));
-    //if the distance is close enough, no practical draggin is happening
-    if (distance >= 1) {
-      const x = e.x;
-      const y = e.y;
-      const x1 = prevMousePos[0];
-      //update signal
-      if (y < canvasConfig.signalCount) {
-        updatedSignal = signals.map((signal, i) => {
-          if (i === y) {
 
-            //strech signal
-            if (Math.max(x, x1) > signal.wave.length) {
-              let prevwave = signal.wave;
-              let sig = signal.wave.split('');
-              //sig = sig + sig[sig.length-1].reapeat(x - sig.length);
-              return { name: signal.name, wave: prevwave + '.'.repeat(x - sig.length + 1), width: signal.width, data: signal.data };
-            }
-
-            //else toggle signal
-            else {
-              let chars = signal.wave.split('');
-              const minx = Math.min(x, x1);
-              const maxX = Math.max(x, x1);
-              var lastState = 'x';
-              i = minx;
-              //get the last state
-              while (i >= 0) {
-                if (chars[i] !== '.') {
-                  lastState = chars[i];
-                  break;
-                }
-                i--;
-              }
-
-              for (var j = minx + 1; j <= maxX; j++) {
-                if (chars[j] !== '.') lastState = chars[j];
-                chars[j] = '.';
-              }
-              if (maxX + 1 < chars.length) chars[maxX + 1] = chars[maxX + 1] === lastState ? '.' : (chars[maxX + 1] === '.' ? lastState : chars[maxX]);
-              return { name: signal.name, wave: chars.join(''), width: signal.width, data: signal.data };
-            }
-          }
-          else return signal;
-        });
-        SetSignals(updatedSignal);
-      }
+    if(cursorState === 0)
+    {
+      const x = Math.round(e.x / canvasConfig.dx);
+      setCursorState(1);
+      setAnnoCoord(prev => ({...prev, startX : x, foot : e.y, startOffset : 0}));
     }
-    else {
-      const x = e.x;
-      const y = e.y;
-      //update signal
-      if (y < canvasConfig.signalCount) {
-        updatedSignal = signals.map((signal, i) => {
-          if (i === y) {
 
-            //strech signal
-            if (x >= signal.wave.length) {
-              let prevwave = signal.wave;
-              let sig = signal.wave.split('');
-              //sig = sig + sig[sig.length-1].reapeat(x - sig.length);
-              return { name: signal.name, wave: prevwave + '.'.repeat(x - sig.length + 1), width: signal.width, data: signal.data };
-            }
-
-            //else toggle signal
-            else {
-              let chars = signal.wave.split('');
-              var last = 'x';
-              var next = 'x';
-              var curr = chars[x];
-              i = x - 1;
-              //get the last state
-              while (i >= 0) {
-                if (chars[i] !== '.') {
-                  last = chars[i];
-                  break;
-                }
-                i--;
-              }
-              curr = chars[x] === '.' ? last : chars[x];
-              next = x + 1 < chars.length ? (chars[x + 1] === '.' ? curr : chars[x + 1]) : 'x';
-              switch (last + curr + next) {
-                case '000':
-                  chars[x] = '1';
-                  chars[x + 1] = '0';
-                  break;
-
-                case '001':
-                  chars[x] = '1';
-                  chars[x + 1] = '.';
-                  break;
-
-                case '010':
-                  chars[x] = '.';
-                  chars[x + 1] = '.';
-                  break;
-
-                case '011':
-                  chars[x] = '.';
-                  chars[x + 1] = '1';
-                  break;
-
-                case '100':
-                  chars[x] = '.';
-                  chars[x + 1] = '0';
-                  break;
-
-                case '101':
-                  chars[x] = '.';
-                  chars[x + 1] = '.';
-                  break;
-
-                case '110':
-                  chars[x] = '0';
-                  chars[x + 1] = '.';
-                  break;
-
-                case '111':
-                  chars[x] = '0';
-                  chars[x + 1] = '1';
-                  break;
-
-                default:
-
-                  break;
-              }
-              return { name: signal.name, wave: chars.join(''), width: signal.width, data: signal.data };
-            }
-          }
-          else return signal;
-        });
-        SetSignals(updatedSignal);
-      }
+    else if(cursorState === 1)
+    {
+      const x = Math.round(e.x / canvasConfig.dx);
+      setCursorState(2);
+      setAnnoCoord(prev => ({...prev, endX : x, endOffset : 0}));
     }
-    setText(parse2String(updatedSignal));
-    setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(updatedSignal), timeStamp: maxTimeStamp(updatedSignal)}));
 
-    //update tab
+    else if (cursorState === 2) {
+    const newAnnotation = {...annoCoord, head : e.y};
+
+    // compute updated annotation array first
+    const updated = [...annotation, newAnnotation];
+
+    // apply annotation state update
+    setAnnotation(updated);
+
+    // reset cursor and coordinates
+    setCursorState(0);
+    setAnnoCoord({text : "time" , type : "<|", startX : 0, endX : 0, head : 0, foot : 0, startOffset : 0, endOffset : 0});
+
+    // update tabs state
     const updatedTab = tabs.map((tab, i) => {
       if (i === selectionTab) {
-        return { name: tabs[i].name, signals: updatedSignal };
+        return { ...tab, annotations: updated };
       }
-      else return tab;
+      return tab;
     });
+    if(annotationMode) editorRef.current.setValue(parse2String(updated));
     setTabs(updatedTab);
+  }
+  };
+
+  const handlerMouseMove = (e) => {
+    var newMousePos = [0,0];
+    newMousePos[0] = e.x;
+    newMousePos[1] = e.y;
+    setMousePos(newMousePos);
   }
   //TODO ................................/////////////////////////////////////////....................
 
@@ -487,13 +381,17 @@ function App() {
                   dx={canvasConfig.dx}
                   dy={canvasConfig.dy}
                   mouse={mousePos}
-                  prevMouse={prevMousePos}
+                  prevMouse={cursorState}
                   dragging={isDragging}
                   offsetX={canvasConfig.offsetX}
                   offsetY={canvasConfig.offsetY}
                   timeStamp={canvasConfig.timeStamp}
                   signalCount={canvasConfig.signalCount}
                   viewMode={viewMode}
+                  annotations={annotation}
+                  currentCoord={annoCoord}
+                  annotationMode={annotationMode}
+                  cursorState={cursorState}
                 />
 
                 <SignalWindow
@@ -509,8 +407,8 @@ function App() {
                   offsetY={canvasConfig.offsetY}
                   timeStamp={canvasConfig.timeStamp}
                   signalCount={canvasConfig.signalCount}
-                  onDown={() => console.log("Mouse Down")}
-                  onMove={() => console.log("Mouse Move")}
+                  onDown={(e) => handlerMouseDownMain(e)}
+                  onMove={(e) => handlerMouseMove(e)}
                   onUp={() => console.log("Mouse UP")}
                   viewMode={viewMode}
                 />
@@ -533,40 +431,14 @@ function App() {
             <button className='button-5' onClick={handleSaveSVG}>Save SVG</button>            
             <button className='button-5' onClick={handleSavePNG}>Save PNG</button>
             <button className='button-5' onClick={handleOpenFile}>Open file</button>
+            <button className='button-5' onClick={handleModeToggle}>Toggle mode</button>
           </div>
           <div className='control-editor-group'>
-            <div
-              ref={editorRef}
-              contentEditable
-              spellCheck={false}
-              id={SignalInput}
-              onInput={handlerSignalCodeInput}
-              onKeyDown={(e) => {
-                if (e.key === "Tab") {
-                  e.preventDefault(); // stop focus change
-                  const selection = window.getSelection();
-                  const range = selection.getRangeAt(0);
-
-                  // Insert two spaces
-                  range.deleteContents();
-                  range.insertNode(document.createTextNode("  "));
-
-                  // Move cursor after inserted spaces
-                  range.collapse(false);
-                  selection.removeAllRanges();
-                  selection.addRange(range);
-                }
-              }}
-              style={{
-                minHeight: "200px",
-                padding: "10px",
-                border: "1px solid gray",
-                fontFamily: "monospace",
-                color: viewMode ? "black" : "white",
-                whiteSpace: "pre",
-                overflow: "auto",
-              }}
-            ></div>
+            <SignalEditor
+              onChange={handlerSignalCodeInput}
+              viewMode={viewMode}
+              editorRef={editorRef}
+            />
           </div>
 
         </div>
@@ -583,18 +455,6 @@ function App() {
 export default App;
 
 //Helper functions...............................................
-
- function highlightKeywords(text) {
-    // Escape any HTML and apply highlighting
-    const escaped = text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-
-    // Replace each keyword with a span
-    const pattern = new RegExp(`\\b(${KEYWORDS.join("|")})\\b`, "g");
-    return escaped.replace(pattern, `<span class="highlight">$1</span>`);
-  }
 
 const indicatorGood = {
   fill: "teal",

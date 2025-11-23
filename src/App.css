@@ -76,7 +76,7 @@ html, body {
   #ui-panel {
     width: 100%;
     margin-top:0%;
-    height: 250px;
+    height: 300px;
     display: flex;
     flex-direction: row;
     background-color: #bdbdbd;
