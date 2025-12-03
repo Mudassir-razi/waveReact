@@ -109,18 +109,29 @@ function App() {
   //Open file handler
   const handleOpenFile = () => {
     openJSONFile()
-      .then(data => {
-        console.log(data[0]);
-        setTabs(data);
-        setSelectionTab(0);
-        SetSignals(data[0].signals);
-        const flatSignals = flattenJson(data[0].signals);
-        setFlatSignals(flatSignals);
-        editorRef.current.setValue(parse2String(data[0].signals));
-      })
-      .catch(err => {
-        alert(err.message);
-      });
+    .then(data => {
+
+      suppressChange.current = true;
+      console.log("Loaded JSON:", data);
+      setTabs(data);
+      setSelectionTab(0);
+
+      const tab0 = data[0];
+
+      SetSignals(tab0.signals);
+      setAnnotation(tab0.annotations);
+
+      const flatSignals = flattenJson(tab0.signals);
+      setFlatSignals(flatSignals);
+
+      if (editorRef.current) {
+        editorRef.current.setValue(parse2String(tab0.signals));
+      }
+      suppressChange.current = false;
+    })
+    .catch(err => {
+      alert(err.message);
+    });
   }
 
   const handleModeToggle = () => {
@@ -423,16 +434,30 @@ function App() {
           <CollapsibleTab viewMode={viewMode}></CollapsibleTab>
           <div className='control-group'>
             <svg height="20" width="75">
-              <rect x="0" y="0" height="10" width="75" style={error === null ? indicatorGood : indicatorBad} strokeWidth="0" />
+              <rect
+                x="0" y="0" height="10" width="75"
+                style={error === null ? indicatorGood : indicatorBad}
+                strokeWidth="0"
+              />
             </svg>
-            <button className='button-5' onClick={handlerAddbutton}> Add new </button>
+            {/* ==== FILE MENU WRAPPER ==== */}
+            <div className="collapsible-menu">
+              <button className="button-5 main-menu-btn">File</button>
+
+              <div className="menu-content">
+                <button className='button-5' onClick={handleOpenFile}>Open</button>
+                <button className='button-5' onClick={handleSaveFile}>Save file</button>
+                <button className='button-5' onClick={handleSaveSVG}>Save as SVG</button>
+                <button className='button-5' onClick={handleSavePNG}>Save as PNG</button>
+              </div>
+            </div>
+            {/* ============================ */}
+            <button className='button-5' onClick={handlerAddbutton}>Add new</button>
             <button className='button-5' onClick={handleCodeFormat}>Auto-format</button>
-            <button className='button-5' onClick={handleSaveFile}>Save file</button>
-            <button className='button-5' onClick={handleSaveSVG}>Save SVG</button>            
-            <button className='button-5' onClick={handleSavePNG}>Save PNG</button>
-            <button className='button-5' onClick={handleOpenFile}>Open file</button>
-            <button className='button-5' onClick={handleModeToggle}>Toggle mode</button>
+            <button className='button-5' onClick={handleModeToggle}>Toggle Mode</button>
+
           </div>
+
           <div className='control-editor-group'>
             <SignalEditor
               onChange={handlerSignalCodeInput}

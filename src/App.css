@@ -200,3 +200,32 @@ html, body {
     background-color: #1f1f20;
   }
 
+.collapsible-menu {
+  position: relative;
+  display: inline-block;
+}
+
+/* DROPDOWN BOX */
+.menu-content {
+  position: absolute;
+  top: 0;            /* align vertically with the File button */
+  left: 105%;        /* push it to the RIGHT side */
+  background: rgba(20, 20, 20, 0);
+  width: 100%;
+  z-index: 999;
+
+  display: flex;
+  flex-direction: column;
+
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-5px);
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+}
+
+/* SHOW on hover */
+.collapsible-menu:hover .menu-content {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}

@@ -47,7 +47,7 @@ export default function Grid({
     return (
       <text
         key={"time" + i}
-        x={Math.round(x-(i >= 10 ? 5 : 3))}               // slight horizontal offset
+        x={i === 0 ? x - 1 : Math.round(x-(i >= 10 ? 5 : 3))}               // slight horizontal offset
         y={10.5}                  // position above the grid
         fill={viewMode ? "#0000006c" : "#ffffff71"}
         fontSize="10"
