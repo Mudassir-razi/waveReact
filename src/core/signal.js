@@ -90,20 +90,50 @@ function renderAllSignals(svg_canvas, signals, dx, dy, offsetY, viewMode)
       defs.appendChild(pattern);
     }
 
-
-    for(var i = 0; i < signals.length; i++){
+    var reRenderTriger = [];
+    var breakerList = [];
+    var i = 0;
+    var depth = 0;
+    for(i = 0; i < signals.length; i++){
         if(typeof signals[i] === "object" &&
             signals[i]  !== null &&
             Object.keys(signals[i]).length === 0 &&
             signals[i].constructor === Object) continue;
-        var name = signals[i].name;
+        var name = Object.keys(signals[i]).includes("name") ? signals[i].name : "";
         var phase = Object.keys(signals[i]).includes("phase") ? parseInt(signals[i].phase) : 0;
         var signal = Object.keys(signals[i]).includes("wave") ? expandWavePattern(signals[i].wave) : " ";
         var data = Object.keys(signals[i]).includes("data") ? expandDataPatterns(signals[i].data) : " ";
         var scale = Object.keys(signals[i]).includes("scale") && signals[i].scale !== " " && signals[i].scale !== ""?  signals[i].scale : 1;
         var color = Object.keys(signals[i]).includes("color") && signals[i].color !== " " && signals[i].color !== ""? darkenHexColor(busColorScheme[signals[i].color],20) : (viewMode ? "black" : "white");
-        renderSignal(svg_canvas, signal, data, i, parseInt(dx), parseInt(dy), offsetY, signals[i].width, scale, phase, color, viewMode);
-    }
+        //It's a real signal, render it, increase the depth
+        if(name[0] !== '/')
+        {
+          const mergedSignal = mergeSignalWithBreakers(signal, breakerList);
+          renderSignal(svg_canvas, mergedSignal, data, depth, parseInt(dx), parseInt(dy), offsetY, signals[i].width, scale, phase, color, viewMode);
+          depth++;
+        }
+
+        //It's a special signal 
+        else{
+          //Breaking signal & if we haven't registered it yet
+          if(reRenderTriger.includes(i))
+          {
+            reRenderTriger.push(i);
+            var breakSignal = Object.keys(signals[i]).includes("wave") ? expandWavePattern(signals[i].wave) : " ";
+            var breaker = "";
+            for (var j = 0; j < breakSignal.length; j++)
+            {
+              if(breakSignal[j] === '|') breaker += '|';
+              else breaker += '.';
+            }
+            breakerList.push(breaker);
+            //We reinvoke the whole rendering
+            i = -1;
+            depth = 0;
+            svg_canvas.innerHTML = ''; // Clear previous content
+          }
+        }
+      }
 }
 
 function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1, Rawscale=1, phase, lineColor, viewMode)
@@ -122,6 +152,7 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
   //Extra direct SVG stuff (rect, poly etc)
   const extras = [];
+  const waveY = idx * (dy+offsetY);
 
   var points = '';
   var shapes = '';
@@ -154,14 +185,14 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
     if(current === '1')
     {
       var compare = (prev === '.' || prev === '|') ? last : prev;
-      if(compare === '0' || compare === 'p' || compare === 'l' || compare === 'P' || compare === 'L')points += getWave('pos', (i * dx) + phase, idx * (dy+offsetY), LUT);
-      else if(compare === '1' || compare === 'n' || compare === 'h' || compare === 'N' || compare === 'H') points += getWave('1g', (i * dx) + phase, idx * (dy+offsetY), LUT);
-      else if(compare === 'z' || compare === 'Z')points += getWave('z1', (i * dx) + phase , idx * (dy+offsetY), LUT);
+      if(compare === '0' || compare === 'p' || compare === 'l' || compare === 'P' || compare === 'L')points += getWave('pos', (i * dx) + phase, waveY, LUT);
+      else if(compare === '1' || compare === 'n' || compare === 'h' || compare === 'N' || compare === 'H') points += getWave('1g', (i * dx) + phase, waveY, LUT);
+      else if(compare === 'z' || compare === 'Z')points += getWave('z1', (i * dx) + phase ,waveY, LUT);
       else if(Object.keys(busColorScheme).includes(compare))
       {
-        shapes += getWave('bus1', (i * dx) + phase , idx * (dy+offsetY), LUT);
+        shapes += getWave('bus1', (i * dx) + phase, waveY, LUT);
         busShapes.push(shapes);
-        points += getWave('Lbus1', (i * dx) + phase , idx * (dy+offsetY), LUT);
+        points += getWave('Lbus1', (i * dx) + phase, waveY, LUT);
       }
       shapeStarted = false; 
       last = '1';
@@ -170,14 +201,14 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
     else if (current === '0')
     {
       compare = (prev === '.' || prev === '|')? last : prev;
-      if(compare === '1' || compare === 'n' || compare === 'h' || compare === 'N' || compare === 'H')points += getWave('neg', (i * dx) + phase , idx * (dy+offsetY), LUT);
-      else if(compare === '0' || compare === 'p' || compare === 'l' || compare === 'P' || compare === 'L') points += getWave('0g', (i * dx) + phase , idx * (dy+offsetY), LUT);
-      else if(compare === 'z' || compare === 'Z')points += getWave('z0', (i * dx) + phase , idx * (dy+offsetY), LUT);
+      if(compare === '1' || compare === 'n' || compare === 'h' || compare === 'N' || compare === 'H')points += getWave('neg', (i * dx) + phase ,waveY, LUT);
+      else if(compare === '0' || compare === 'p' || compare === 'l' || compare === 'P' || compare === 'L') points += getWave('0g', (i * dx) + phase ,waveY, LUT);
+      else if(compare === 'z' || compare === 'Z')points += getWave('z0', (i * dx) + phase ,waveY, LUT);
       else if(Object.keys(busColorScheme).includes(compare)) 
       {
-        shapes += getWave('bus0', (i * dx) + phase , idx * (dy+offsetY), LUT);
+        shapes += getWave('bus0', (i * dx) + phase ,waveY, LUT);
         busShapes.push(shapes);
-        points += getWave('Lbus0', (i * dx) + phase , idx * (dy+offsetY), LUT);
+        points += getWave('Lbus0', (i * dx) + phase ,waveY, LUT);
       }
       shapeStarted = false;
       last = '0';
@@ -187,14 +218,14 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
     else if( current === 'p' || current === 'P')
     {
       compare = (prev === '.' || prev === '|')? last : prev;
-      points += getWave('p', (i * dx) + phase , idx * (dy+offsetY), LUT);
+      points += getWave('p', (i * dx) + phase ,waveY, LUT);
       if(Object.keys(busColorScheme).includes(compare)) 
       {
-        shapes += getWave('busH', (i * dx) + phase , idx * (dy+offsetY), LUT);
+        shapes += getWave('busH', (i * dx) + phase ,waveY, LUT);
         busShapes.push(shapes);
       }
       shapeStarted = false;
-      if(current === 'P')extras.push(getArrorw(LUT[5], LUT[0], (i * dx) + phase, idx * (dy+offsetY), 8, viewMode));
+      if(current === 'P')extras.push(getArrorw(LUT[5], LUT[0], (i * dx) + phase,waveY, 8, viewMode));
       last = current;
       
     }
@@ -203,14 +234,14 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
     else if( current === 'n' || current === 'N')
     {
       compare = (prev === '.' || prev === '|')? last : prev;
-      points += getWave('n', (i * dx) + phase , idx * (dy+offsetY), LUT);
+      points += getWave('n', (i * dx) + phase ,waveY, LUT);
       if(Object.keys(busColorScheme).includes(compare)) 
       {
-        shapes += getWave('busH', (i * dx) + phase , idx * (dy+offsetY), LUT);
+        shapes += getWave('busH', (i * dx) + phase ,waveY, LUT);
         busShapes.push(shapes);
       }
       shapeStarted = false;
-      if(current === 'N')extras.push(getArrorw(LUT[0], LUT[5], (i * dx) + phase, idx * (dy+offsetY), 8, viewMode));
+      if(current === 'N')extras.push(getArrorw(LUT[0], LUT[5], (i * dx) + phase,waveY, 8, viewMode));
       last = current;
     }
 
@@ -218,14 +249,14 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
     else if( current === 'h' || current === 'H')
     {
       compare = (prev === '.' || prev === '|')? last : prev;
-      points += getWave('h', (i * dx) + phase , idx * (dy+offsetY), LUT);
+      points += getWave('h', (i * dx) + phase ,waveY, LUT);
       if(Object.keys(busColorScheme).includes(compare)) 
       {
-        shapes += getWave('busH', (i * dx) + phase , idx * (dy+offsetY), LUT);
+        shapes += getWave('busH', (i * dx) + phase ,waveY, LUT);
         busShapes.push(shapes);
       }
       shapeStarted = false;
-      if(current === 'H')extras.push(getArrorw(LUT[5], LUT[0], (i * dx) + phase, idx * (dy+offsetY), 8, viewMode));
+      if(current === 'H')extras.push(getArrorw(LUT[5], LUT[0], (i * dx) + phase,waveY, 8, viewMode));
       last = current;
     }
 
@@ -233,15 +264,15 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
     else if( current === 'l' || current === 'L')
     {
       compare = (prev === '.' || prev === '|')? last : prev;
-      points += getWave('l', (i * dx) + phase , idx * (dy+offsetY), LUT);
+      points += getWave('l', (i * dx) + phase ,waveY, LUT);
       if(Object.keys(busColorScheme).includes(compare)) 
       {
-        shapes += getWave('busHL', (i * dx) + phase , idx * (dy+offsetY), LUT);
+        shapes += getWave('busHL', (i * dx) + phase ,waveY, LUT);
         busShapes.push(shapes);
       }
       shapeStarted = false;
       //if capital, then add arrow
-      if(current === 'L')extras.push(getArrorw(LUT[0], LUT[5], (i * dx) + phase, idx * (dy+offsetY), 8, viewMode));
+      if(current === 'L')extras.push(getArrorw(LUT[0], LUT[5], (i * dx) + phase,waveY, 8, viewMode));
       last = current;
     }
 
@@ -249,13 +280,13 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
     else if( current === 'z' || current === 'Z')
     {
       compare = (prev === '.' || prev === '|')? last : prev;
-      if(compare === '1' || compare === 'n' || compare === 'h' || compare === 'N' || compare === 'H')points += getWave('1z', (i * dx) + phase , idx * (dy+offsetY), LUT);
-      else if(compare === '0' || compare === 'p' || compare === 'l' || compare === 'P' || compare === 'L') points += getWave('0z', (i * dx) + phase , idx * (dy+offsetY), LUT);
-      else if(compare === 'z' || compare === 'Z') points += getWave('z', (i * dx) + phase , idx * (dy+offsetY), LUT);
+      if(compare === '1' || compare === 'n' || compare === 'h' || compare === 'N' || compare === 'H')points += getWave('1z', (i * dx) + phase ,waveY, LUT);
+      else if(compare === '0' || compare === 'p' || compare === 'l' || compare === 'P' || compare === 'L') points += getWave('0z', (i * dx) + phase ,waveY, LUT);
+      else if(compare === 'z' || compare === 'Z') points += getWave('z', (i * dx) + phase ,waveY, LUT);
       if(Object.keys(busColorScheme).includes(compare)) 
       {
-        shapes += getWave('bustS', (i * dx) + phase  , idx * (dy+offsetY), LUT);
-        points += getWave('Lbusz', (i * dx) + phase  , idx * (dy+offsetY), LUT);
+        shapes += getWave('bustS', (i * dx) + phase  ,waveY, LUT);
+        points += getWave('Lbusz', (i * dx) + phase  ,waveY, LUT);
         busShapes.push(shapes);
       }
       shapeStarted = false;
@@ -268,29 +299,29 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
       compare = (prev === '.' || prev === '|') ? last : prev;
       if(compare === '1' || compare === 'n' || compare === 'h' || compare === 'N' || compare === 'H')
       {
-        shapes = getWave('1bus', (i * dx) + phase , idx * (dy+offsetY), LUT);
-        points += getWave('L1bus', (i * dx) + phase , idx * (dy+offsetY), LUT);
+        shapes = getWave('1bus', (i * dx) + phase ,waveY, LUT);
+        points += getWave('L1bus', (i * dx) + phase ,waveY, LUT);
       }
       else if(compare === '0' || compare === 'p' || compare === 'l' || compare === 'P' || compare === 'L')
       { 
-        shapes = getWave('0bus', (i * dx) + phase  , idx * (dy+offsetY), LUT);
-        points += getWave('L0bus', (i * dx) + phase  , idx * (dy+offsetY), LUT);
+        shapes = getWave('0bus', (i * dx) + phase  ,waveY, LUT);
+        points += getWave('L0bus', (i * dx) + phase  ,waveY, LUT);
       }
       else if(compare === 'z' || compare === 'Z')
       { 
-        shapes = getWave('bustE', (i * dx) + phase  , idx * (dy+offsetY), LUT);
-        points += getWave('Lzbus', (i * dx) + phase  , idx * (dy+offsetY), LUT);
+        shapes = getWave('bustE', (i * dx) + phase  ,waveY, LUT);
+        points += getWave('Lzbus', (i * dx) + phase  ,waveY, LUT);
       }
 
       else if(Object.keys(busColorScheme).includes(compare))
       {
         
         //close previous shape
-        shapes += getWave('bustS', (i * dx) + phase , idx * (dy+offsetY), LUT);
+        shapes += getWave('bustS', (i * dx) + phase ,waveY, LUT);
         busShapes.push(shapes);
 
-        shapes = getWave('bustE', (i * dx) + phase  , idx * (dy+offsetY), LUT);
-        points += getWave('Lbust', (i * dx) + phase  , idx * (dy+offsetY), LUT);
+        shapes = getWave('bustE', (i * dx) + phase  ,waveY, LUT);
+        points += getWave('Lbust', (i * dx) + phase  ,waveY, LUT);
       }
 
       //push colors
@@ -308,7 +339,7 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
           }
           const t1 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
           t1.setAttribute("x", i*dx + dx*0.70 + busLen*14);
-          t1.setAttribute("y", idx * (dy+offsetY) + 1.20*dy);
+          t1.setAttribute("y",waveY + 1.20*dy);
           t1.textContent = `${dataIndex < data.split(' ').length ? data.split(' ')[dataIndex] : ' '}`;
           texts.push(t1);
           dataIndex++;
@@ -326,49 +357,49 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
     {
       if(last === '1')
       {
-        points += getWave('1', (i * dx) + phase, idx * (dy+offsetY), LUT);
+        points += getWave('1', (i * dx) + phase,waveY, LUT);
       }
       else if(last === '0')
       { 
-        points += getWave('0', (i * dx) + phase, idx * (dy+offsetY), LUT);
+        points += getWave('0', (i * dx) + phase,waveY, LUT);
       }
 
       //Clock cycles
       else if(last === 'p' || last === 'P')
       {
-        points += getWave('p', (i * dx) + phase, idx * (dy+offsetY), LUT);
-        if(last === 'P')extras.push(getArrorw(LUT[5], LUT[0], (i * dx) + phase, idx * (dy+offsetY), 8, viewMode));
+        points += getWave('p', (i * dx) + phase,waveY, LUT);
+        if(last === 'P')extras.push(getArrorw(LUT[5], LUT[0], (i * dx) + phase,waveY, 8, viewMode));
       }
       else if(last === 'n' || last === 'N')
       {
-        points += getWave('n', (i * dx) + phase, idx * (dy+offsetY), LUT);
-        if(last === 'N')extras.push(getArrorw(LUT[0], LUT[5], (i * dx) + phase, idx * (dy+offsetY), 8, viewMode));
+        points += getWave('n', (i * dx) + phase,waveY, LUT);
+        if(last === 'N')extras.push(getArrorw(LUT[0], LUT[5], (i * dx) + phase,waveY, 8, viewMode));
       }
 
       // Steep High low
       else if(last === 'h' || last === 'H')
       {
-        points += getWave('1', (i * dx) + phase, idx * (dy+offsetY), LUT);
+        points += getWave('1', (i * dx) + phase,waveY, LUT);
       }
       else if(last === 'l' || last === 'L')
       {
-        points += getWave('0', (i * dx) + phase, idx * (dy+offsetY), LUT);
+        points += getWave('0', (i * dx) + phase,waveY, LUT);
       }
       else if(last === 'z' || last === 'Z')
       {
-        points += getWave('z', (i * dx) + phase, idx * (dy+offsetY), LUT);
+        points += getWave('z', (i * dx) + phase,waveY, LUT);
       }
 
       else if(Object.keys(busColorScheme).includes(last))
       {
-        shapes += getWave('bus', (i * dx) + phase , idx * (dy+offsetY), LUT);
-        points += getWave('Lbus', (i * dx) + phase , idx * (dy+offsetY), LUT);
+        shapes += getWave('bus', (i * dx) + phase ,waveY, LUT);
+        points += getWave('Lbus', (i * dx) + phase ,waveY, LUT);
       }
 
       //add break symbol
       if(current === '|')
       {
-        extras.push(getBreak(LUT[0], LUT[3], (i * dx) + phase, idx * (dy+offsetY), viewMode))
+        extras.push(getBreak(LUT[0], LUT[3], (i * dx) + phase,waveY, viewMode))
       }
       
     }
@@ -800,4 +831,34 @@ function darkenHexColor(hex, percent) {
     const newHex = ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 
     return `#${newHex}`;
+}
+
+function mergeSignalWithBreakers(signal, breakersList) {
+  // Determine the max needed length
+  let maxLen = signal.length;
+
+  for (const breaker of breakersList) {
+    if (breaker.length > maxLen) {
+      maxLen = breaker.length;
+    }
+  }
+
+  // Pad signal with '.' if shorter
+  if (signal.length < maxLen) {
+    signal = signal.padEnd(maxLen, ".");
+  }
+
+  // Convert to array for mutation
+  let output = signal.split("");
+
+  // Apply breaker bars
+  for (const breaker of breakersList) {
+    for (let i = 0; i < breaker.length; i++) {
+      if (breaker[i] === "|") {
+        output[i] = "|";   // override with bar
+      }
+    }
+  }
+
+  return output.join("");
 }

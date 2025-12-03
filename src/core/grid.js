@@ -120,7 +120,6 @@ export default function Grid({
     const y3 = annot.head + 0.5;
     const dash = annot.type?.includes("-") ? "6 6" : "none";
     const arrow = annot.type?.includes("<") || annot.type?.includes(">");
-    console.log("Annotation coords:", x1, y1, x2, y3);
     return (
       <g key={"annot" + i} stroke={viewMode ? "#0c0606ff" : "#ffff"} fill="none">
         {/* Left leg */}

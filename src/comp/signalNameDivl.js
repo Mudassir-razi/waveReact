@@ -3,7 +3,7 @@ import { flattenJson } from "../core/parser";
 // Configurable top offset for SVG content
 const topOffset = 10; // Adjust this value to change the top padding of the SVG
 const baseX = 20; // Base X position for rendering
-const indentPerLevel = 15; // Indentation per nesting level
+const indentPerLevel = 20; // Indentation per nesting level
 const bracketWidth = 10; // Width of the bracket
 
 export default function SignalNameDiv({ signals, dy, offsetY, viewMode }) {
@@ -54,6 +54,7 @@ export default function SignalNameDiv({ signals, dy, offsetY, viewMode }) {
                         textAnchor="middle"
                         fill={viewMode ? "blue" :"#5e83b8ff"}
                         fontSize={12}
+                        fontFamily="courier"
                     >
                         {groupName}
                     </text>
@@ -93,7 +94,7 @@ export default function SignalNameDiv({ signals, dy, offsetY, viewMode }) {
             }
             
             //If it's a JSON object
-            else if (Object.keys(item).includes('name')) {
+            else if (Object.keys(item).includes('name') && item.name[0] !== '/') {
                 const maxLevel = calculateMaxLevel(signals);
                 const signalX = baseX + maxLevel * indentPerLevel + maxNameLength + 20; // fixed column for all signals
 
@@ -142,7 +143,7 @@ export function GetNameSVGWidth(signals)
 {
     const maxLevel = calculateMaxLevel(signals);
     const maxNameLength = calculateMaxNameLength(signals);
-    console.log("Max Level : ", maxLevel, " Max Name Length : ", maxNameLength, " BaseX : ", baseX);
+    //console.log("Max Level : ", maxLevel, " Max Name Length : ", maxNameLength, " BaseX : ", baseX);
     const value = baseX + maxLevel * indentPerLevel + maxNameLength + 30;
 //      const totalWidth = baseX + maxLevel * indentPerLevel + maxNameLength * 9;
     return value;

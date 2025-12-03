@@ -25,8 +25,8 @@ function App() {
     dy: 20,
     timeStamp: 40,
     signalCount: 0,
-    offsetY: 8,
-    offsetX: 0,
+    offsetY: 10,
+    offsetX: 20,
     bgColor: "#000000",
     gridColor: "#FFFFFF"
   });
