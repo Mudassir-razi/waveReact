@@ -176,6 +176,7 @@ function App() {
           else return tab;
         });
         setTabs(updatedTab);
+        setError(null);
       }
     } catch (e) {
       console.log(e.message);

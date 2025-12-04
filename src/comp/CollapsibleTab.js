@@ -75,6 +75,15 @@ const CollapsibleRightTab = ({ viewMode }) => {
           <li>
             The green box over the "Add New" button turns RED if you enter incorrect code.
           </li>
+          <li>
+            Toggle mode toggles between signal mode and annotation mode. In annotation, use mouse to create annotations.
+          </li>
+          <li>
+            In the Annotation code, using '_' will give you subscripts. t_RCD = t<sub>RCD</sub>
+          </li>
+          <li>
+            Global break: Use {<code>name : "/*", wave : "..|.."</code>} in wave property to create a global break in the waveform.
+          </li>
         </ul>
       </div>
     </div>

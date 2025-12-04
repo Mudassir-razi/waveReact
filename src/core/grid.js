@@ -174,16 +174,15 @@ export default function Grid({
 
         {/* Text centered on the bar */}
         <text
-          x={Math.round((x1 + x2) / 2) + 0.5}
-          y={y3 - 5.5}      // Slightly above bar
+          x={Math.round((x1 + x2) / 2)}
+          y={y3-8}
           textAnchor="middle"
           fill={viewMode ? "#0c0606ff" : "#ffffffff"}
           fontSize="14"
           fontFamily="Courier"
-          textRendering="geometricPrecision"
-          shapeRendering="crispEdges"
+          fontWeight="normal"
         >
-          {annot.text}
+          {parseSubscript(annot.text)}
         </text>
       </g>
     );
@@ -224,4 +223,20 @@ export default function Grid({
       {timeLabels}
     </svg>
   );
+}
+
+
+function parseSubscript(text) {
+  const parts = text.split(/(_[A-Za-z0-9]+)/g);
+
+  return parts.map((part, index) => {
+    if (part.startsWith("_")) {
+      return (
+        <tspan key={index} baselineShift="sub" fontSize="10">
+          {part.substring(1)}   {/* skip underscore */}
+        </tspan>
+      );
+    }
+    return <tspan key={index}>{part}</tspan>;
+  });
 }
