@@ -287,14 +287,14 @@ function App() {
 
     if(cursorState === 0)
     {
-      const x = Math.round(e.x / canvasConfig.dx);
+      const x = Math.round(e.x);
       setCursorState(1);
       setAnnoCoord(prev => ({...prev, startX : x, foot : e.y, startOffset : 0}));
     }
 
     else if(cursorState === 1)
     {
-      const x = Math.round(e.x / canvasConfig.dx);
+      const x = Math.round(e.x);
       setCursorState(2);
       setAnnoCoord(prev => ({...prev, endX : x, endOffset : 0}));
     }

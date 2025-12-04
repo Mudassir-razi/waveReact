@@ -67,9 +67,9 @@ export default function Grid({
     if(annotationMode === 0)return null;
     if (!currentCoord || !mouse || mouse.length < 2) return null;
 
-    const x1 = currentCoord.startX * dx + currentCoord.startOffset + 0.5;
+    const x1 = currentCoord.startX + currentCoord.startOffset + 0.5;
     const y1 = currentCoord.foot + 10.5;
-    const x2 = currentCoord.endX * dx + currentCoord.endOffset + 0.5;
+    const x2 = currentCoord.endX + currentCoord.endOffset + 0.5;
 
     const legOffset1 = y1 > mouse[1] ? 10 : -10;
     const legOffset2 = y1 > mouse[1] ? -10 : 10;
@@ -114,9 +114,9 @@ export default function Grid({
   // --- ANNOTATIONS ---
   const annotationElements = annotations.map((annot, i) => {
 
-    const x1 = annot.startX * dx + annot.startOffset + 0.5;
+    const x1 = annot.startX + annot.startOffset + 0.5;
     const y1 = annot.foot + 0.5;
-    const x2 = annot.endX * dx + annot.endOffset + 0.5;
+    const x2 = annot.endX + annot.endOffset + 0.5;
     const y3 = annot.head + 0.5;
     const dash = annot.type?.includes("-") ? "6 6" : "none";
     const arrow = annot.type?.includes("<") || annot.type?.includes(">");

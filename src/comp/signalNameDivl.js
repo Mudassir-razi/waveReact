@@ -155,7 +155,7 @@ const calculateMaxNameLength = (items) => {
     const flatSignals = flattenJson(items);
     var maxLength = 0;
     flatSignals.forEach(signal => {
-        if (signal.name && signal.name.length > maxLength) {
+        if (signal.name && signal.name.length > maxLength && signal.name[0] !== '/') {
             maxLength = signal.name.length;
         }
     });

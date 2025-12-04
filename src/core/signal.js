@@ -104,7 +104,7 @@ function renderAllSignals(svg_canvas, signals, dx, dy, offsetY, viewMode)
         var signal = Object.keys(signals[i]).includes("wave") ? expandWavePattern(signals[i].wave) : " ";
         var data = Object.keys(signals[i]).includes("data") ? expandDataPatterns(signals[i].data) : " ";
         var scale = Object.keys(signals[i]).includes("scale") && signals[i].scale !== " " && signals[i].scale !== ""?  signals[i].scale : 1;
-        var color = Object.keys(signals[i]).includes("color") && signals[i].color !== " " && signals[i].color !== ""? darkenHexColor(busColorScheme[signals[i].color],20) : (viewMode ? "black" : "white");
+        var color = Object.keys(signals[i]).includes("color") && Object.keys(busColorScheme).includes(signals[i].color)? darkenHexColor(busColorScheme[signals[i].color],20) : (viewMode ? "black" : "white");
         //It's a real signal, render it, increase the depth
         if(name[0] !== '/')
         {
@@ -116,7 +116,7 @@ function renderAllSignals(svg_canvas, signals, dx, dy, offsetY, viewMode)
         //It's a special signal 
         else{
           //Breaking signal & if we haven't registered it yet
-          if(reRenderTriger.includes(i))
+          if(!reRenderTriger.includes(i))
           {
             reRenderTriger.push(i);
             var breakSignal = Object.keys(signals[i]).includes("wave") ? expandWavePattern(signals[i].wave) : " ";
@@ -859,6 +859,6 @@ function mergeSignalWithBreakers(signal, breakersList) {
       }
     }
   }
-
+  //console.log(output.join(""));
   return output.join("");
 }
