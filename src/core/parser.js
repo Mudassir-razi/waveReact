@@ -95,7 +95,7 @@ export function parse2String(tree) {
           val = String(value);
         }
       } else {
-        val = `" "`; // Explicitly add a blank string in quotes
+        val = `""`; // Explicitly add a blank string in quotes
       }
 
       const valStr = val.padEnd(valueWidths[key]);
@@ -170,16 +170,17 @@ export function flattenJson(tree) {
   return result;
 }
 
-export function CheckError(flatSignals)
+export function checkError(value)
 {
-  if (!Array.isArray(flatSignals) || flatSignals.length === 0) {
-    throw new Error("No signals found in the JSON data.");
+  if (value === undefined) return true;
+
+  if (Array.isArray(value)) {
+    return value.some(item => checkError(item));
   }
 
-  for (const signal of flatSignals) {
-    //console.log(Object.keys(signal));
-    if (!KEYWORDS.map(k => {Object.keys(signal).includes(k)})){
-      throw new Error("Signal object missing required keys: " + JSON.stringify(signal));
-    }
+  if (value !== null && typeof value === "object") {
+    return Object.values(value).some(v => checkError(v));
   }
+
+  return false;
 }

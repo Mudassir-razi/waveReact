@@ -11,7 +11,7 @@ import {GetNameSVGWidth} from './comp/signalNameDivl';
 import TabBar from './comp/tabBar';
 import CollapsibleTab from './comp/CollapsibleTab';
 import {combineAndSaveSVG, openJSONFile, saveJSONFile} from './core/fileSys';
-import {parse2Json, parse2String, flattenJson, CheckError } from './core/parser';
+import {parse2Json, parse2String, flattenJson, checkError } from './core/parser';
 import ToggleButton from "./comp/toggleButton";
 import SignalEditor from './comp/Editor';
 
@@ -148,8 +148,9 @@ function App() {
     try {
       if(annotationMode === 0){
         const jsonObj = parse2Json(editorRef.current.getValue()); // convert to JSON array
-        const flatSignals = flattenJson(jsonObj); // flatten the JSON array
-        //CheckError(flatSignals);
+        const flatSignals = flattenJson(jsonObj); // flatten the JSON 
+        console.log(jsonObj);
+        if(checkError(flatSignals))return;
         SetSignals(jsonObj); // Only if valid
         setFlatSignals(flatSignals);
         setCanvasConfig(prev => ({ ...prev, offsetX: GetNameSVGWidth(jsonObj), timeStamp: maxTimeStamp(flatSignals), signalCount: flatSignals.length }));

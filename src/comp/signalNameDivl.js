@@ -1,4 +1,4 @@
-import { flattenJson } from "../core/parser";
+import { checkError, flattenJson } from "../core/parser";
 
 // Configurable top offset for SVG content
 const topOffset = 10; // Adjust this value to change the top padding of the SVG
@@ -11,6 +11,7 @@ export default function SignalNameDiv({ signals, dy, offsetY, viewMode }) {
 
     // Calculate total height for SVG
     const calculateHeight = (items) => {
+        try {
         let height = 0;
         items.forEach(item => {
             if (Array.isArray(item)) {
@@ -21,7 +22,16 @@ export default function SignalNameDiv({ signals, dy, offsetY, viewMode }) {
             }
         });
         return height;
+        }
+        catch(e)
+        {
+            console.error("Error in calculating height for SignalNameDiv:", e);
+            return 0;
+        }
+        
     };
+
+    if(checkError(signals)) return null;
 
     const maxLevel = calculateMaxLevel(signals);
     const maxNameLength = calculateMaxNameLength(signals);

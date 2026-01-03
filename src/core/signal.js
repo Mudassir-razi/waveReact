@@ -106,10 +106,12 @@ function renderAllSignals(svg_canvas, signals, dx, dy, offsetY, viewMode)
         var scale = Object.keys(signals[i]).includes("scale") && signals[i].scale !== " " && signals[i].scale !== ""?  signals[i].scale : 1;
         var color = Object.keys(signals[i]).includes("color") && Object.keys(busColorScheme).includes(signals[i].color)? darkenHexColor(busColorScheme[signals[i].color],20) : (viewMode ? "black" : "white");
         //It's a real signal, render it, increase the depth
+
+        const phaseActual = isNaN(phase) ? 0 : ( phase > 10 ? 10 : (phase < -10 ? -10 : phase));
         if(name[0] !== '/')
         {
           const mergedSignal = mergeSignalWithBreakers(signal, breakerList);
-          renderSignal(svg_canvas, mergedSignal, data, depth, parseInt(dx), parseInt(dy), offsetY, signals[i].width, scale, phase, color, viewMode);
+          renderSignal(svg_canvas, mergedSignal, data, depth, parseInt(dx), parseInt(dy), offsetY, signals[i].width, scale, phaseActual * 3, color, viewMode);
           depth++;
         }
 
