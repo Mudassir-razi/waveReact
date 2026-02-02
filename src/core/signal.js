@@ -237,7 +237,7 @@ function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1
     busShape.setAttribute("stroke", "none");
     busShape.setAttribute("stroke-width", 0);
     busShape.setAttribute("fill", busColors[colorIdx]);
-    busShape.setAttribute("fill-opacity", "0.5");
+    busShape.setAttribute("fill-opacity", "1");
     ctx.appendChild(busShape);
     colorIdx++;
   });

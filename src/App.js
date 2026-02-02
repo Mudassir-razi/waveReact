@@ -22,7 +22,7 @@ function App() {
   const [canvasConfig, setCanvasConfig] = useState({
 
     dx: 30,
-    dy: 20,
+    dy: 22,
     timeStamp: 40,
     signalCount: 0,
     offsetY: 10,

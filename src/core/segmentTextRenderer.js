@@ -109,15 +109,15 @@ function getText()
         //t1.setAttribute("x", textOffset + scale* dx*0.28 + busLength*14);
         t1.setAttribute("x", 5 + textOffset + (busLength * dx * scale)/2);
         t1.setAttribute("y", offsetY+15);
-        t1.setAttribute("font-size", 20);
+        t1.setAttribute("font-size", 12);
         t1.textContent =  textContent;
         return t1;
     }
 
     //If the text it too long, make two portions. 
-    else if (textLen < (8 * busLength * scale)) {
+    else {
         const part1 = data[index].substring(0, 4 * busLength - 1);
-        const part2 = data[index].substring(4*busLength-1);
+        const part2 = data[index].substring(4 * busLength -1);
 
         const t1 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
         const t2 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
@@ -127,12 +127,11 @@ function getText()
 
         t1.setAttribute("x", 5 + textOffset + (busLength * dx * scale)/2);
         t1.setAttribute("y", offsetY+10);
-        t1.setAttribute("font-size", 14);
+        t1.setAttribute("font-size", 12);
 
         t2.setAttribute("x", 5 + textOffset + (busLength * dx * scale)/2);
-        t2.setAttribute("y", offsetY+18);
-        t2.setAttribute("font-size", 14);
+        t2.setAttribute("y", offsetY+20);
+        t2.setAttribute("font-size", 12);
         return [t1, t2];
     }
-    return null;
 }
