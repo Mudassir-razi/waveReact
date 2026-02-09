@@ -7,7 +7,7 @@
         
 
         {
-            "type": "firefox",
+            "type": "msedge",
             "request": "launch",
             "name": "Launch React App on firefox",
             "url": "http://localhost:3000",

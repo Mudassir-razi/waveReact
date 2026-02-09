@@ -26,7 +26,7 @@ export function initTextRenderer(dx_, dy_, offsetY_, scale_, data_)
     index = 0;
     scale = scale_;
     data = data_.split(' ');
-    console.log(data);
+    //console.log(data);
 }
 
 /**
@@ -101,6 +101,7 @@ export function getTextSegmentForce(){if(busLength !== 0)return getText();}
 function getText()
 {   
     if(index >= data.length)return null;
+    const fontSize = 16;
     const textContent = data[index];
     const textLen = textContent.length;
     if(textLen < (4 * busLength * scale)){
@@ -109,7 +110,7 @@ function getText()
         //t1.setAttribute("x", textOffset + scale* dx*0.28 + busLength*14);
         t1.setAttribute("x", 5 + textOffset + (busLength * dx * scale)/2);
         t1.setAttribute("y", offsetY+15);
-        t1.setAttribute("font-size", 12);
+        t1.setAttribute("font-size", fontSize);
         t1.textContent =  textContent;
         return t1;
     }
@@ -127,11 +128,11 @@ function getText()
 
         t1.setAttribute("x", 5 + textOffset + (busLength * dx * scale)/2);
         t1.setAttribute("y", offsetY+10);
-        t1.setAttribute("font-size", 12);
+        t1.setAttribute("font-size", fontSize);
 
         t2.setAttribute("x", 5 + textOffset + (busLength * dx * scale)/2);
         t2.setAttribute("y", offsetY+20);
-        t2.setAttribute("font-size", 12);
+        t2.setAttribute("font-size", fontSize);
         return [t1, t2];
     }
 }

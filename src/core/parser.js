@@ -7,7 +7,7 @@ const KEYWORDS = ["name", "data", "wave", "width", "scale", "color"];
  * @param {string} jsonString - The input JSON string.
  * @returns {Object|Object[]} - The parsed object or array of objects.
  */
-export function parse2Json(str) {
+export function parse2List(str) {
   try {
     // Use `eval` in a safe wrapper (assumes the string is trusted!)
     const wrapped = `(${str})`; // wrap in () to treat as expression
@@ -19,7 +19,7 @@ export function parse2Json(str) {
 
     return result;
   } catch (err) {
-    throw new Error("Failed to parse object array: " + err.message);
+    throw err;
   }
 }
 
@@ -141,46 +141,80 @@ export function parse2String(tree) {
 
 /**
  * Recursively flattens a tree-like JSON list into a flat list of signal objects.
- * Only objects with "name" and "data" keys are included.
+ * Only objects with at least "name" and "data" keys are included.
  * Empty objects `{}` are preserved in the result.
  * 
  * @param {Array} tree - The nested JSON tree
  * @returns {Array<Object>} - A flat list of signal and empty objects
  */
-export function flattenJson(tree) {
+export function flattenSignals(tree) {
   const result = [];
 
-  function dfs(node) {
-    if (Array.isArray(node)) {
-      const startIdx = typeof node[0] === "string" ? 1 : 0;
-      for (let i = startIdx; i < node.length; i++) {
-        dfs(node[i]);
+  try{
+    function dfs(node) {
+      if (Array.isArray(node)) {
+        const startIdx = typeof node[0] === "string" ? 1 : 0;
+        for (let i = startIdx; i < node.length; i++) {
+          dfs(node[i]);
+        }
+      } else if (typeof node === "object" && node !== null) {
+        if (Object.keys(node).length === 0) {
+          result.push({}); // preserve empty objects
+        } else if ('name' in node && 'wave' in node) {
+          result.push(node);
+        }
+        // else: ignore partial/invalid objects
       }
-    } else if (typeof node === "object" && node !== null) {
-      if (Object.keys(node).length === 0) {
-        result.push({}); // preserve empty objects
-      } else if ('name' in node && 'wave' in node) {
-        result.push(node);
-      }
-      // else: ignore partial/invalid objects
     }
-  }
 
-  dfs(tree);
+    dfs(tree);
+  }catch(err) {throw err};
+  
   return result;
 }
 
-export function checkError(value)
-{
-  if (value === undefined) return true;
-
-  if (Array.isArray(value)) {
-    return value.some(item => checkError(item));
+export function checkError(input, path = "root") {
+  // Rule 1: input must be a list (array)
+  if (!Array.isArray(input)) {
+    throw new Error(`${path}: Input must be a list`);
   }
 
-  if (value !== null && typeof value === "object") {
-    return Object.values(value).some(v => checkError(v));
-  }
+  if(input.length <= 0)throw new Error("Input empty");
 
-  return false;
+  input.forEach((item, index) => {
+    const currentPath = `${path}[${index}]`;
+
+    // Rule 3: Only first element can be a string
+    if (typeof item === "string") {
+      if (index !== 0) {
+        throw new Error(
+          `${currentPath}: String only allowed as first element`
+        );
+      }
+      return;
+    }
+
+    // Rule 2: Element types
+    if (Array.isArray(item)) {
+      checkError(item, KEYWORDS, currentPath);
+      return;
+    }
+
+    if (typeof item === "object" && item !== null) {
+      Object.keys(item).forEach((key) => {
+        // Rule 4: object keys must be from KEYWORDS
+        if (!KEYWORDS.includes(key)) {
+          throw new Error(
+            `${currentPath}: Invalid key "${key}". Allowed keys: ${KEYWORDS.join(", ")}`
+          );
+        }
+      });
+      return;
+    }
+
+    // Anything else is invalid
+    throw new Error(
+      `${currentPath}: Invalid element type (${typeof item})`
+    );
+  });
 }

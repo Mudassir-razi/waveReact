@@ -6,14 +6,16 @@ import Grid from './core/grid';
 import {useState, useRef, useEffect} from 'react';
 import SignalWindow from './core/signal';
 import {maxTimeStamp} from './core/signal';
-import SignalNameDiv from './comp/signalNameDivl';
-import {GetNameSVGWidth} from './comp/signalNameDivl';
+import SignalNameDiv from './comp/signalNameDiv';
+import {GetNameSVGWidth} from './comp/signalNameDiv';
 import TabBar from './comp/tabBar';
 import CollapsibleTab from './comp/CollapsibleTab';
 import {combineAndSaveSVG, openJSONFile, saveJSONFile} from './core/fileSys';
-import {parse2Json, parse2String, flattenJson, checkError } from './core/parser';
+import {parse2List, parse2String, flattenSignals, checkError } from './core/parser';
 import ToggleButton from "./comp/toggleButton";
 import SignalEditor from './comp/Editor';
+
+import NavBar from './comp/navBar';
 
 function App() {
 
@@ -78,7 +80,7 @@ function App() {
     var randomSignal = '0.';
     const newItem = { name: 'Signal_' + signals.length, wave: randomSignal, data: '', width: 1, phase : 0 };
     const updatedSignal = [...signals, newItem];
-    const updatedFlatSignals = flattenJson(updatedSignal);
+    const updatedFlatSignals = flattenSignals(updatedSignal);
 
     SetSignals(prev => [...prev, newItem]);
     setFlatSignals(updatedFlatSignals);
@@ -121,7 +123,7 @@ function App() {
       SetSignals(tab0.signals);
       setAnnotation(tab0.annotations);
 
-      const flatSignals = flattenJson(tab0.signals);
+      const flatSignals = flattenSignals(tab0.signals);
       setFlatSignals(flatSignals);
 
       if (editorRef.current) {
@@ -147,8 +149,8 @@ function App() {
     if (suppressChange.current) return;
     try {
       if(annotationMode === 0){
-        const jsonObj = parse2Json(editorRef.current.getValue()); // convert to JSON array
-        const flatSignals = flattenJson(jsonObj); // flatten the JSON 
+        const jsonObj = parse2List(editorRef.current.getValue()); // convert to JSON array
+        const flatSignals = flattenSignals(jsonObj); // flatten the JSON 
         console.log(jsonObj);
         if(checkError(flatSignals))return;
         SetSignals(jsonObj); // Only if valid
@@ -167,7 +169,7 @@ function App() {
       }
       else 
       {
-        const jsonObj = parse2Json(editorRef.current.getValue());
+        const jsonObj = parse2List(editorRef.current.getValue());
         setAnnotation(jsonObj);
         //update tab information
         const updatedTab = tabs.map((tab, i) => {
@@ -212,7 +214,7 @@ function App() {
   //tab switching handler
   const handerlTabClick = (e) => {
     //now load new data from next tab
-    const flatSignals = flattenJson(tabs[e].signals);
+    const flatSignals = flattenSignals(tabs[e].signals);
     setSelectionTab(e);
     SetSignals(tabs[e].signals);
     setFlatSignals(flatSignals);
@@ -265,7 +267,7 @@ function App() {
     setTabs(updatedTabs);
 
     //now load new data from next tab
-    const flatSignals = flattenJson(updatedTabs[updatedTabIndex].signals);
+    const flatSignals = flattenSignals(updatedTabs[updatedTabIndex].signals);
 
     SetSignals(updatedTabs[updatedTabIndex].signals);
     setFlatSignals(flatSignals);
@@ -347,6 +349,7 @@ function App() {
           <ToggleButton onChange={(v)=>{v === true ? setViewMode(0) : setViewMode(1)}} size="sm" />
           <h2>                .</h2>
         </div>
+        <NavBar/>
         {/* The OUTPUT of the app. Signal and it's names */}
         <div id="output-panel"  style={{ background : viewMode ? 'white' : 'black' }}>
 
