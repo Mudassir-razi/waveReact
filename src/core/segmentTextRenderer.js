@@ -101,7 +101,7 @@ export function getTextSegmentForce(){if(busLength !== 0)return getText();}
 function getText()
 {   
     if(index >= data.length)return null;
-    const fontSize = 16;
+    const fontSize = 12;
     const textContent = data[index];
     const textLen = textContent.length;
     if(textLen < (4 * busLength * scale)){

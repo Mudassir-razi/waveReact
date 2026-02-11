@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import {getHierarchy, getSignalNames, getMaxLevel, getMaxNameLength, standardizeSignal, getMaxWaveLength} from "./waveFormWindowManager";
 import {Box} from '@mui/material';
 
-export default function WaveFormWindow({signals, config})
+export default function WaveFormWindow({signals, config, hscrollValue, vscrollValue})
 {
     //To calculate viewport size
     const containerRef = useRef(null);
@@ -48,19 +48,20 @@ export default function WaveFormWindow({signals, config})
     const signalNames = getSignalNames();
     const maxLevel = getMaxLevel();
     const maxNameLength = getMaxNameLength();
+    const maxWaveLength = getMaxWaveLength(standardSignal);
+
     const height = (standardSignal.length+1) * (config.dy + config.offsetY);
     const nameDivWidth = (maxLevel + 1) * config.indentPerLevel + maxNameLength * config.charWidth;
     
-    const maxWaveLength = getMaxWaveLength(standardSignal);
-    const waveFormSVGWidth = maxWaveLength * config.dx;
-    const viewPortWidth = config.dx * (maxNameLength > 56 ? 56 : maxWaveLength);
+    
+    const waveFormSVGWidth = (maxWaveLength + 15) * config.dx;
+    const viewPortWidth = config.dx * (maxWaveLength + 15 > 56 ? 56 : maxWaveLength + 15);
+    const viewPortHPos = (hscrollValue / 100) * (waveFormSVGWidth - viewPortWidth);
+
+    console.log(viewPortHPos, waveFormSVGWidth, viewPortWidth, maxWaveLength);
 
     //console.log(nameDivWidth, maxLevel, config);
     //posSignalWindow.x = nameDivWidth;
-    
-    //Scrollbar 
-    const [hscrollValue, setHscrollValue] = useState(0);
-
 
     return (
         <Box
@@ -77,7 +78,6 @@ export default function WaveFormWindow({signals, config})
                 flexDirection: "row",
                 flex: 1,
                 minHeight: 0, 
-                overflow: "hidden"
                 }}
             >
                 <Box
@@ -106,16 +106,22 @@ export default function WaveFormWindow({signals, config})
                     minWidth: 0,     // IMPORTANT for horizontal overflow
                     minHeight: 0,
                     overflow: "hidden",
+                    position: "relative"
                 }}
                 >
                 <SignalWindow
                     pos={posSignalWindow}
                     signals={standardSignal}
+                    maxWaveLength={maxWaveLength}
                     config={config}
+
                     height={height}
                     width={waveFormSVGWidth}
+                    
                     vpHeight={height}
                     vpWidth={viewPortWidth}
+                    vpPosx={viewPortHPos}
+                    
                     viewMode={false}
                 />
                 </Box>
@@ -123,4 +129,9 @@ export default function WaveFormWindow({signals, config})
             </Box>
 
     );
+}
+
+function clip(value, lim)
+{
+    return value < lim ? value : lim;
 }

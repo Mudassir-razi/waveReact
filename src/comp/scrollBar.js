@@ -8,7 +8,7 @@ export default function ScrollBar({
   return (
     <Box
       sx={{
-        width: "100%",
+        width: "80%",
         px: 1,
       }}
     >
@@ -26,7 +26,7 @@ export default function ScrollBar({
           },
 
           "& .MuiSlider-rail": {
-            height: 6,
+            height: 3,
             borderRadius: 3,
             backgroundColor: "#ddd",
           },

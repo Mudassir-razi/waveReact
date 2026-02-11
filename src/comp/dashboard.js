@@ -14,10 +14,13 @@ import {
   Tabs,
   Tab,
   Button,
-  Divider
+  Divider,
+  ToggleButtonGroup,
+  ToggleButton,
 } from "@mui/material";
 
 import WaveFormWindow from "../core/waveFormWindow";
+import { editor } from "monaco-editor";
 
 
 
@@ -55,12 +58,12 @@ export default function Dashboard() {
     //first, store the last tab's data
     setAllTabsData(manageTabs(allTabsData, selectedTabIndex, 'mod', currentSignalData));
     setSelectedTabIndex(newValue);
-    console.log(newValue);
+    //console.log(newValue);
     editorRef.current.setValue(parse2String(allTabsData[newValue].waveform));
     setCurrentSignalData(allTabsData[newValue].waveform);
   }
 
-  //Buttons handlers
+  //Tab Buttons handlers
   const handleTabPlus = () =>{setAllTabsData(manageTabs(allTabsData, selectedTabIndex, 'add'));}
   const handleTabMinus = () =>{
     const newSelectedTabIndex = selectedTabIndex - 1;
@@ -70,18 +73,26 @@ export default function Dashboard() {
     editorRef.current.setValue(parse2String(allTabsData[newSelectedTabIndex].waveform));
     setCurrentSignalData(allTabsData[newSelectedTabIndex].waveform);
   }
-
-  //Update the existing tabs data to accomodate new changes in the editor by user
-  // useEffect(() => {
-  //   setAllTabsData(manageTabs(allTabsData, selectedTabIndex, 'sub', currentSignalData));
-  // });
   //Tabs handler ends
 
+
+  //Waveform Button handler
+  const[waveFormButtonSelection, setWaveFormButtonSelection] = useState("10");
+  const handleWaveFormButton = (event, newValue) => {
+    setWaveFormButtonSelection(newValue);
+    //console.log(newValue);
+  }
+
+  
   const [currentSignalData, setCurrentSignalData] = useState([]);
   const [hscrollValue, setHscrollValue] = useState(0);
+  const [vscrollValue, setVscrollValue] = useState(0);
+  const [maxHscroll, setMaxHscroll] = useState(100);
+  const [maxVscroll, setMaxVscroll] = useState(100);
 
   const [editorHeight, setEditorHeight] = useState(240);
   const isResizing = useRef(false);
+  const svgContainerRef = useRef(null);
 
 
   //Editor logic
@@ -97,11 +108,25 @@ export default function Dashboard() {
     }
   }
 
+  //Editor buttons
   const handleFormat = () => {
     try{
       if (editorRef.current) {
         const formatted = parse2String(currentSignalData);
         editorRef.current.setValue(formatted);
+      }
+    }catch(err)
+    {
+      alert(err.message);
+    }
+  }
+
+   //Editor adding new signal shortcut buttons
+  const handleAddSignal = () => {
+    try{
+      if (editorRef.current) {
+        const updateSignal = [...currentSignalData, {name : 'clock', wave : 'p(.,10)'}];
+        editorRef.current.setValue(parse2String(updateSignal));
       }
     }catch(err)
     {
@@ -210,19 +235,42 @@ export default function Dashboard() {
         >
           {/* Top buttons (SVG-related) */}
           <Stack spacing={1}>
-            <Button variant="contained" size="small">1/0</Button>
-            <Button variant="outlined" size="small">P/N</Button>
-            <Button variant="outlined" size="small">Pen</Button>
-            <Divider sx={{ bgcolor: "#444", my: 1 }} />
-            <Button variant="text" size="small">Shift</Button>
-            <Button variant="text" size="small">Shift</Button>
+            <ToggleButtonGroup
+              onChange={handleWaveFormButton}
+              value={waveFormButtonSelection}
+              orientation="vertical"
+              exclusive
+              sx={{
+                "& .MuiToggleButton-root": {
+                  color: "#ccc",
+                  borderColor: "#333", 
+                  "&.Mui-selected": {
+                    color: "#fff",
+                    borderColor: "#555",
+                    bgcolor: "#555",
+                  }}
+              }}
+            >
+              <ToggleButton value="10" aria-label="left aligned">
+                1/0
+              </ToggleButton>
+              <ToggleButton value="Clock" aria-label="centered">
+                Clock
+              </ToggleButton>
+              <ToggleButton value="Bus" aria-label="right aligned">
+                Bus
+              </ToggleButton>
+              <ToggleButton value="Erase" aria-label="justified">
+                Erase
+              </ToggleButton>
+            </ToggleButtonGroup>
           </Stack>
 
           {/* Bottom buttons (Editor-related) */}
           <Stack spacing={1}>
             <Divider sx={{ bgcolor: "#444", my: 1 }} />
             <Button onClick={handleFormat} variant="text" size="small">Format</Button>
-            <Button variant="text" size="small">Annotation</Button>
+            <Button onClick={handleAddSignal} variant="text" size="small">Add new</Button>
           </Stack>
         </Box>
 
@@ -233,6 +281,7 @@ export default function Dashboard() {
             display: "flex",
             flexDirection: "column",
             minWidth: 0, // IMPORTANT for Monaco
+            //alignItems : "center"
           }}
         >
           {/* SVG workspace */}
@@ -244,16 +293,29 @@ export default function Dashboard() {
               alignItems: "left",
               justifyContent: "left",
               px: 2,
+              overflow: "clip",
+              minHeight: 0,
             }}
           >
             <Box>
               <WaveFormWindow 
                 signals={currentSignalData}
                 config={canvasConfig}
+                hscrollValue={hscrollValue}
               />
             </Box>
           </Box>
-          <Scrollbar onChange={setHscrollValue} value={hscrollValue}/>
+          <Box
+            sx={{
+              width: "80%",
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Scrollbar onChange={setHscrollValue} value={hscrollValue}/>
+          </Box>
           {/* Drag handle */}
           <Box
             sx={{
@@ -269,6 +331,7 @@ export default function Dashboard() {
           <Box
             sx={{
               height: editorHeight,
+              width : "100%",
               borderTop: "1px solid #333",
             }}
           >

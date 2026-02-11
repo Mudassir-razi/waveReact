@@ -32,7 +32,7 @@ export default function SignalNameDiv({pos, signalNames, hierarchy, maxLevel, he
                     y={0}           
                     fill={textColor}
                     textAnchor="end"
-                    fontSize={18}
+                    fontSize={14}
                     fontFamily="monospace"
                     transform={`translate(${nameOffset}, ${(i+1) * (config.dy + config.offsetY)})`}
                 >

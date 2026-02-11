@@ -1,6 +1,9 @@
 import { getShapeSegment, getLineSegment, getShapeSegmentForce, initRender } from "./segmentRenderer";
 import { getTextSegment, initTextRenderer, getTextSegmentForce } from "./segmentTextRenderer";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import {Grid, Cursor} from './grid';
+import React, { useMemo } from "react";
+
 const div = 4;
 //coordinate lookup table
 
@@ -21,16 +24,31 @@ const busColorScheme = {
 };
 
 //returns the main layer of the canvas, with all the signals rendered onto it
-export default function SignalWindow({pos, signals, config, height, width, vpHeight, vpWidth, viewMode})
+export default function SignalWindow({pos, signals, config, maxWaveLength, height, width, vpHeight, vpWidth, vpPosx, viewMode})
 {
   const signalWindowRef = useRef(null);
-  //console.log(signals);
-  //Renders the signals on the canvas  
-  useEffect(()=>{
-    const mainCanvas = signalWindowRef.current;
-    renderAllSignals(mainCanvas, signals, config, viewMode);
-  }, [signals, config, viewMode]);
+  const [mouseX, setMouseX] = useState(null);
 
+  // Track mouse movement inside SVG
+  const handleMouseMove = (event) => {
+    const svg = event.currentTarget;
+    const pt = svg.createSVGPoint();
+    pt.x = event.clientX;
+    pt.y = event.clientY;
+    const cursorPoint = pt.matrixTransform(svg.getScreenCTM().inverse());
+    setMouseX(cursorPoint.x); // update cursor x
+  };
+
+  // Handle clicks (example: log or select)
+  const handleClick = (event) => {
+    const svg = event.currentTarget;
+    const pt = svg.createSVGPoint();
+    pt.x = event.clientX;
+    pt.y = event.clientY;
+    const clickPoint = pt.matrixTransform(svg.getScreenCTM().inverse());
+    console.log("Clicked at", clickPoint.x, clickPoint.y);
+    // you can update other states here if needed
+  };
 
   return(
       <svg 
@@ -38,226 +56,269 @@ export default function SignalWindow({pos, signals, config, height, width, vpHei
       id="mainLayer" 
       x={pos.x}
       y={pos.y}
-      width={width} 
+      width={"100%"} 
       height={height} 
-      viewBox={`0 0 ${vpWidth} ${vpHeight}`}
-      // style={{ position: "absolute", top: 10, left: offsetX, zIndex: 2, backgroundColor: "white" }}
-      // onMouseDown={(e) => {
-      //   const rect = e.currentTarget.getBoundingClientRect();
-      //   const x = Math.floor((e.clientX - rect.left));
-      //   const y = Math.floor((e.clientY - rect.top) );
-      //   onDown({ x, y }); 
-      // }}
-      // onMouseMove={(e) => {
-      //   const rect = e.currentTarget.getBoundingClientRect();
-      //   const x = Math.floor((e.clientX - rect.left));
-      //   const y = Math.floor((e.clientY - rect.top));
-      //   console.log("Move");
-      //   onMove({ x, y });
-      // }}
-      // onMouseUp={(e) => {
-      //   const rect = e.currentTarget.getBoundingClientRect();
-      //   const x = Math.floor((e.clientX - rect.left) / dx);
-      //   const y = Math.floor((e.clientY - rect.top) / (dy+offsetY));
-      //   onUp({ x, y });
-      // }}
+      viewBox={`${vpPosx} 0 ${vpWidth} ${vpHeight}`}
+      style={{ display: "block", backgroundColor: "#00000000" }}
+      onMouseMove={handleMouseMove}
+      onClick={handleClick}
     >
+      <DiagonalHatchPattern/>
+      <Grid
+        config={config}
+        maxWaveLength={maxWaveLength}
+        signalCount={signals.length}
+      />
+      <Cursor mouseX={mouseX} height={height} />
+      <AllSignals
+        signals={signals}
+        config={config}
+        maxWaveLength={maxWaveLength}
+        viewMode={viewMode}
+      />
     </svg>
   );
 }
 
-/**
- * renders all the signals on the grid
- * @param {svg} svg_canvas -SVG object to render signals on
- * @param {JSON} signals -JSON objects containing signals
- * @param {int} dx - Horizontal spacing between waveform bits
- * @param {int} dy -Height of the waveform
- * @param {int} offsetY - Offset between waveforms
- */
-function renderAllSignals(svg_canvas, signals, config, viewMode)
-{
-    svg_canvas.innerHTML = ''; // Clear previous content
-    //console.log("Rendering " + sequence.length + " signals with Settings: dx: " + dx + " dy: " + dy);
 
-    //Create pattern and defs for hatch pattern
-    // Find or create <defs> inside your svg_canvas
-    let defs = svg_canvas.querySelector("defs");
-    if (!defs) {
-      defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-      svg_canvas.insertBefore(defs, svg_canvas.firstChild);
-    }
+const AllSignals = React.memo(function AllSignals({
+  signals,
+  config,
+  maxWaveLength,
+  viewMode,
+  xGenDone = false
+}) {
 
-    // Create pattern and append if not already present
-    if (!defs.querySelector(`#${patternId}`)) {
-      const pattern = getDiagonalHatchPattern({ id: patternId, stroke : "white" });
-      defs.appendChild(pattern);
-    }
+  const renderedSignals = useMemo(() => {
+    return signals
+      .map((signal, i) => {
+        if (
+          typeof signal === "object" &&
+          Object.keys(signal).length === 0
+        ) {
+          return null;
+        }
 
-    var i = 0;
-    for(i = 0; i < signals.length; i++){
-        if(typeof signals[i] === "object" &&
-            Object.keys(signals[i]).length === 0 ) continue;
-        const signal = signals[i];
-        var color = Object.keys(signals[i]).includes("color") && Object.keys(busColorScheme).includes(signal.color)? darkenHexColor(busColorScheme[signal.color],20) : (viewMode ? "black" : "white");
-        
-        renderSignal(svg_canvas, 
-          signal.wave, 
-          signal.data, 
-          i,
-          config.dx, 
-          config.dy, 
-          config.offsetY, 
-          signal.width, 
-          signal.scale, 
-          signal.phase * 3, 
-          color, 
-          viewMode);
+        const color =
+          Object.keys(signal).includes("color") &&
+          Object.keys(busColorScheme).includes(signal.color)
+            ? darkenHexColor(busColorScheme[signal.color], 20)
+            : viewMode
+            ? "black"
+            : "white";
+
+        return (
+          <Signal
+            key={i}
+            wave={signal.wave}
+            data={signal.data}
+            idx={i}
+            UnscaledDx={config.dx}
+            dy={config.dy}
+            offsetY={config.offsetY}
+            lineWidth={signal.width}
+            Rawscale={signal.scale}
+            phase={signal.phase * 3}
+            lineColor={color}
+            viewMode={viewMode}
+          />
+        );
+      })
+      .filter(Boolean);
+  }, [signals, config, viewMode]);
+
+  return <>{renderedSignals}</>;
+});
+
+
+const Signal = React.memo(function Signal({
+  wave,
+  data,
+  idx,
+  UnscaledDx,
+  dy,
+  offsetY,
+  lineWidth = 1,
+  Rawscale = 1,
+  phase,
+  lineColor,
+  viewMode
+}) {
+
+  const {
+    points,
+    busShapes,
+    busColors,
+    texts
+  } = useMemo(() => {
+
+    const parsedInt = parseFloat(Rawscale);
+    const scale = isNaN(parsedInt) ? 1 : parsedInt;
+
+    const waveY = idx * (dy + 10) + 15;
+
+    let points = "";
+    let texts = [];
+    let busShapes = [];
+    let busColors = [];
+
+    let current = wave[0];
+    let lastValid = current === "0" ? "1" : "0";
+
+    initRender(UnscaledDx, dy, div, waveY, scale, lineWidth % 2 !== 0);
+    initTextRenderer(UnscaledDx, dy, waveY, scale, data);
+
+    for (let i = 0; i < wave.length; i++) {
+      current = wave[i];
+      const dxScaled = UnscaledDx * scale;
+
+      const lastValidState =
+        Object.keys(busColorScheme).includes(lastValid)
+          ? "B"
+          : lastValid.toUpperCase();
+
+      const currentValidState =
+        Object.keys(busColorScheme).includes(current)
+          ? "B"
+          : current.toUpperCase();
+
+      points += getLineSegment(
+        currentValidState,
+        lastValidState,
+        i * dxScaled + phase
+      );
+
+      const shape = getShapeSegment(
+        currentValidState,
+        lastValidState,
+        i * dxScaled + phase
+      );
+
+      const textSegment = getTextSegment(
+        currentValidState,
+        lastValidState,
+        i * dxScaled + phase
+      );
+
+      if (shape) {
+        busColors.push(busColorScheme[lastValid]);
+        busShapes.push(shape);
       }
-}
 
-function renderSignal(ctx, wave, data, idx, UnscaledDx, dy, offsetY, lineWidth=1, Rawscale=1, phase, lineColor, viewMode)
-{
+      if (textSegment) {
+        if (Array.isArray(textSegment)) {
+          texts.push(...textSegment);
+        } else {
+          texts.push(textSegment);
+        }
+      }
 
-  const parsedInt = parseFloat(Rawscale);
-  const scale = isNaN(parsedInt) ? 1 : parsedInt;
+      lastValid = current === "." ? lastValid : current;
+    }
 
-  //For signal lines
-  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  //For signal shapes (buses)
-  const busShapes = [] ;
-  const busColors = [] ;
-  //For in-signal texts
-  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  //Extra direct SVG stuff (rect, poly etc)
-  const extras = [];
-  const waveY = idx * (dy + 10) + 15;
+    const lastSegment = getShapeSegmentForce();
+    const lastTextSegment = getTextSegmentForce();
 
-  var points = '';
-  var texts =  [];
-  var current = wave[0];
-  var lastValid = current === '0' ? '1' : '0';
-
-  //console.log(dy, waveY, idx);
-  initRender(UnscaledDx, dy, div, waveY, scale, lineWidth % 2 !== 0);
-  initTextRenderer(UnscaledDx, dy, waveY, scale, data);
-  for(var i = 0;i < wave.length; i++)
-  { 
-    current = wave[i];
-    const dxScaled = UnscaledDx * scale;
-    const lastValidState = Object.keys(busColorScheme).includes(lastValid) ? "B" : lastValid.toUpperCase();
-    const currentValidState = Object.keys(busColorScheme).includes(current) ? "B" : current.toUpperCase();
-    points += getLineSegment(currentValidState, lastValidState, i * dxScaled + phase);
-    const shape = getShapeSegment(currentValidState, lastValidState, i * dxScaled + phase);
-    const textSegment = getTextSegment(currentValidState, lastValidState, i * dxScaled + phase);
-
-    if(shape)
-    {
+    if (lastSegment) {
+      busShapes.push(lastSegment);
       busColors.push(busColorScheme[lastValid]);
-      busShapes.push(shape);
     }
-    if(textSegment) 
-    {
-      if(Array.isArray(textSegment))texts.push(...textSegment);
-      else texts.push(textSegment);
+
+    if (lastTextSegment) {
+      if (Array.isArray(lastTextSegment)) {
+        texts.push(...lastTextSegment);
+      } else {
+        texts.push(lastTextSegment);
+      }
     }
-    //console.log(textSegment);
-    lastValid = current === '.' ? lastValid : current;
-  }
 
-  //handle last shape if needed
-  const lastSegment = getShapeSegmentForce();
-  const lastTextSegment = getTextSegmentForce();
-  if(lastSegment){
-    busShapes.push(lastSegment);
-    busColors.push(busColorScheme[lastValid]);
-  }
-  if(lastTextSegment)
-  {
-    if(Array.isArray(lastTextSegment))texts.push(...lastTextSegment);
-    else texts.push(lastTextSegment);
-  }
+    return { points, busShapes, busColors, texts };
 
-  try{
-    //console.log(busShapes, lastValid);
-    text.setAttribute("x", 0);
-    text.setAttribute("y", 0);
-    text.setAttribute("fill", "white");
-    text.setAttribute("font-family", "monospace");
-    text.setAttribute("text-anchor", "middle");
-    text.setAttribute("pointer-events", "none");
-    text.setAttribute("class", "dynamic-text");
-    texts.forEach(tspan => {
-      text.appendChild(tspan);
-    }); 
-  } catch (error) {
-    console.log(error);
-    console.log(texts);
-  } 
+  }, [
+    wave,
+    data,
+    idx,
+    UnscaledDx,
+    dy,
+    Rawscale,
+    phase,
+    lineWidth
+  ]);
 
-  path.setAttribute("d", points);
-  path.setAttribute("stroke", lineColor);
-  path.setAttribute("fill", "none");
-  path.setAttribute("stroke-width", lineWidth);
-  path.setAttribute("shapreRendering", "crispEdges");
+  return (
+    <>
+      {/* Bus Shapes */}
+      {busShapes.map((shape, i) => (
+        <path
+          key={`bus-${i}`}
+          d={shape}
+          stroke="none"
+          strokeWidth={0}
+          fill={
+            busColors[i] !== "x"
+              ? darkenHexColor(busColors[i], 20)
+              : busColors[i]
+          }
+          fillOpacity="1"
+        />
+      ))}
 
+      {/* Main Signal Path */}
+      <path
+        d={points}
+        stroke={lineColor}
+        fill="none"
+        strokeWidth={lineWidth}
+      />
 
-  //applying shapes
-  var colorIdx = 0;
-  busShapes.forEach(element => {
-    const busShape = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    busShape.setAttribute("d", element);
-    busShape.setAttribute("stroke", "none");
-    busShape.setAttribute("stroke-width", 0);
-    busShape.setAttribute("fill", busColors[colorIdx] !== 'x' ? darkenHexColor(busColors[colorIdx], 20) : busColors[colorIdx]);
-    busShape.setAttribute("fill-opacity", "1");
-    ctx.appendChild(busShape);
-    colorIdx++;
-  });
+      {/* Text */}
+      <text
+        x={0}
+        y={0}
+        fill="white"
+        fontFamily="monospace"
+        textAnchor="middle"
+        pointerEvents="none"
+        className="dynamic-text"
+      >
+        {texts.map((tspan, i) => (
+          <tspan key={i} {...tspan} />
+        ))}
+      </text>
+    </>
+  );
+});
 
-  // path2.setAttribute("d", shapes);
-  // path2.setAttribute("stroke", "none");
-  // path2.setAttribute("fill", "skyblue");
-  // path2.setAttribute("fill-opacity", "0.5");
-
-  //ctx.appendChild(path2);
-  ctx.appendChild(path);
-  ctx.appendChild(text);
-  
-  //append extras
-  extras.forEach(element => {
-    ctx.appendChild(element);
-  });
-}
 
 
 
 //Pattern generator function for 'X'
-function getDiagonalHatchPattern({
+function DiagonalHatchPattern({
   id = "hatch-diag",
   size = 5,
   stroke = "#000",
   strokeWidth = 1,
   rotation = 45,
-} = {}) {
-  const svgns = "http://www.w3.org/2000/svg";
-
-  // Create pattern element
-  const pattern = document.createElementNS(svgns, "pattern");
-  pattern.setAttribute("id", id);
-  pattern.setAttribute("patternUnits", "userSpaceOnUse");
-  pattern.setAttribute("width", size);
-  pattern.setAttribute("height", size);
-  pattern.setAttribute("patternTransform", `rotate(${rotation})`);
-
-  // Create hatch line
-  const path = document.createElementNS(svgns, "path");
-  path.setAttribute("d", `M 0 0 L 0 ${size}`);
-  path.setAttribute("stroke", stroke);
-  path.setAttribute("stroke-width", strokeWidth);
-
-  pattern.appendChild(path);
-  return pattern;
+}) {
+  return (
+    <defs>
+      <pattern
+        id={id}
+        patternUnits="userSpaceOnUse"
+        width={size}
+        height={size}
+        patternTransform={`rotate(${rotation})`}
+      >
+        <path
+          d={`M 0 0 L 0 ${size}`}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+        />
+      </pattern>
+    </defs>
+  );
 }
+
 
 function darkenHexColor(hex, percent) {
     // Remove '#' if present
