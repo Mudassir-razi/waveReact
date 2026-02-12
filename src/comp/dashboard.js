@@ -5,6 +5,7 @@ import SignalEditor from "./Editor";
 import { parse2List, parse2String, checkError } from "../core/parser";
 import {manageTabs} from './tabsManager'
 import Scrollbar from "./scrollBar";
+import { modifyOnMouseEvent } from "../core/signalLogic";
 
 import {
   Box,
@@ -22,9 +23,7 @@ import {
 import WaveFormWindow from "../core/waveFormWindow";
 import { editor } from "monaco-editor";
 
-
-
-// Dummy helpers
+// Tab helpers
 function tabProps(index) {
   return {
     id: `tab-${index}`,
@@ -73,7 +72,7 @@ export default function Dashboard() {
     editorRef.current.setValue(parse2String(allTabsData[newSelectedTabIndex].waveform));
     setCurrentSignalData(allTabsData[newSelectedTabIndex].waveform);
   }
-  //Tabs handler ends
+  //Tabs handler ends..........................................................................................................
 
 
   //Waveform Button handler
@@ -83,6 +82,32 @@ export default function Dashboard() {
     //console.log(newValue);
   }
 
+
+  //Mouse movement control for SVG
+  const [mouseDown, setMouseDown] = useState(false);
+  const [lastMousePos, setLastMousePos] = useState({x: 0, y: 0});
+
+  const mouseDownSVG  = (e) => {
+    setMouseDown(true);
+    setLastMousePos({x: e.x, y: e.y});
+  }
+
+  const mouseUpSVG = (e) => {
+
+    function transform(c){return {x : Math.floor(c.x/(canvasConfig.dx)), y : Math.floor(c.y/(canvasConfig.dy + canvasConfig.offsetY))};}
+    try{
+      const clickNow = transform(e);
+      const clickLast = transform(lastMousePos);
+      const updatedSignal = modifyOnMouseEvent(currentSignalData, clickNow.x, clickNow.y, clickLast.x, clickLast.y, waveFormButtonSelection);
+      console.log(updatedSignal);
+      editorRef.current.setValue(parse2String(updatedSignal));
+      //console.log(waveFormButtonSelection);
+    }catch(err)
+    {
+      console.log("Error in mouseClickSVG: ", err);
+    }
+  }
+  //......................................................................................................................................
   
   const [currentSignalData, setCurrentSignalData] = useState([]);
   const [hscrollValue, setHscrollValue] = useState(0);
@@ -302,6 +327,10 @@ export default function Dashboard() {
                 signals={currentSignalData}
                 config={canvasConfig}
                 hscrollValue={hscrollValue}
+                vscrollValue={vscrollValue}
+                
+                mouseDownSVG={mouseDownSVG}
+                mouseUpSVG={mouseUpSVG}
               />
             </Box>
           </Box>

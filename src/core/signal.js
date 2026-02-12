@@ -24,7 +24,7 @@ const busColorScheme = {
 };
 
 //returns the main layer of the canvas, with all the signals rendered onto it
-export default function SignalWindow({pos, signals, config, maxWaveLength, height, width, vpHeight, vpWidth, vpPosx, viewMode})
+export default function SignalWindow({pos, signals, config, maxWaveLength, height, width, vpHeight, vpWidth, vpPosx, viewMode, mouseDownSVG, mouseUpSVG})
 {
   const signalWindowRef = useRef(null);
   const [mouseX, setMouseX] = useState(null);
@@ -46,7 +46,19 @@ export default function SignalWindow({pos, signals, config, maxWaveLength, heigh
     pt.x = event.clientX;
     pt.y = event.clientY;
     const clickPoint = pt.matrixTransform(svg.getScreenCTM().inverse());
-    console.log("Clicked at", clickPoint.x, clickPoint.y);
+    //console.log("Clicked at", clickPoint.x, clickPoint.y);
+    mouseDownSVG({ x: clickPoint.x, y: clickPoint.y }); 
+    // you can update other states here if needed
+  };
+
+  const handleClickUp = (event) => {
+    const svg = event.currentTarget;
+    const pt = svg.createSVGPoint();
+    pt.x = event.clientX;
+    pt.y = event.clientY;
+    const clickPoint = pt.matrixTransform(svg.getScreenCTM().inverse());
+    //console.log("Clicked up at", clickPoint.x, clickPoint.y);
+    mouseUpSVG({ x: clickPoint.x, y: clickPoint.y }); 
     // you can update other states here if needed
   };
 
@@ -61,7 +73,8 @@ export default function SignalWindow({pos, signals, config, maxWaveLength, heigh
       viewBox={`${vpPosx} 0 ${vpWidth} ${vpHeight}`}
       style={{ display: "block", backgroundColor: "#00000000" }}
       onMouseMove={handleMouseMove}
-      onClick={handleClick}
+      onMouseDown={handleClick}
+      onMouseUp={handleClickUp}
     >
       <DiagonalHatchPattern/>
       <Grid
@@ -154,22 +167,27 @@ const Signal = React.memo(function Signal({
 
     const parsedInt = parseFloat(Rawscale);
     const scale = isNaN(parsedInt) ? 1 : parsedInt;
-
     const waveY = idx * (dy + 10) + 15;
 
-    let points = "";
+    let points = ["", ""];
     let texts = [];
     let busShapes = [];
     let busColors = [];
 
     let current = wave[0];
     let lastValid = current === "0" ? "1" : "0";
+    let complement = false;
 
     initRender(UnscaledDx, dy, div, waveY, scale, lineWidth % 2 !== 0);
     initTextRenderer(UnscaledDx, dy, waveY, scale, data);
 
     for (let i = 0; i < wave.length; i++) {
       current = wave[i];
+
+      //deal with complementary signal
+      if(current === ' ' && wave[i+1] === '~' && complement === false){complement = true; i = -1; continue;}
+      if(complement) current = current === '1' ? '0' : (current === '0' ? '1' : (current === '.' ? '.' : '-')); 
+      
       const dxScaled = UnscaledDx * scale;
 
       const lastValidState =
@@ -182,56 +200,66 @@ const Signal = React.memo(function Signal({
           ? "B"
           : current.toUpperCase();
 
-      points += getLineSegment(
-        currentValidState,
-        lastValidState,
-        i * dxScaled + phase
-      );
+      //We do the normal thing if we are True signal
+      if(!complement){
+        points[0] += getLineSegment(
+          currentValidState,
+          lastValidState,
+          i * dxScaled + phase
+        );
 
-      const shape = getShapeSegment(
-        currentValidState,
-        lastValidState,
-        i * dxScaled + phase
-      );
+        const shape = getShapeSegment(
+          currentValidState,
+          lastValidState,
+          i * dxScaled + phase
+        );
 
-      const textSegment = getTextSegment(
-        currentValidState,
-        lastValidState,
-        i * dxScaled + phase
-      );
+        const textSegment = getTextSegment(
+          currentValidState,
+          lastValidState,
+          i * dxScaled + phase
+        );
 
-      if (shape) {
-        busColors.push(busColorScheme[lastValid]);
-        busShapes.push(shape);
-      }
+        if (shape) {
+          busColors.push(busColorScheme[lastValid]);
+          busShapes.push(shape);
+        }
 
-      if (textSegment) {
-        if (Array.isArray(textSegment)) {
-          texts.push(...textSegment);
-        } else {
-          texts.push(textSegment);
+        if (textSegment) {
+          if (Array.isArray(textSegment)) {
+            texts.push(...textSegment);
+          } else {
+            texts.push(textSegment);
+          }
+        }
+
+        lastValid = current === "." ? lastValid : current;
+
+        const lastSegment = getShapeSegmentForce();
+        const lastTextSegment = getTextSegmentForce();
+
+        if (lastSegment) {
+          busShapes.push(lastSegment);
+          busColors.push(busColorScheme[lastValid]);
+        }
+
+        if (lastTextSegment) {
+          if (Array.isArray(lastTextSegment)) {
+            texts.push(...lastTextSegment);
+          } else {
+            texts.push(lastTextSegment);
+          }
         }
       }
-
-      lastValid = current === "." ? lastValid : current;
-    }
-
-    const lastSegment = getShapeSegmentForce();
-    const lastTextSegment = getTextSegmentForce();
-
-    if (lastSegment) {
-      busShapes.push(lastSegment);
-      busColors.push(busColorScheme[lastValid]);
-    }
-
-    if (lastTextSegment) {
-      if (Array.isArray(lastTextSegment)) {
-        texts.push(...lastTextSegment);
-      } else {
-        texts.push(lastTextSegment);
+      else{
+        points[1] += getLineSegment(
+          currentValidState,
+          lastValidState,
+          i * dxScaled + phase
+        );
+        lastValid = current === "." ? lastValid : current;
       }
     }
-
     return { points, busShapes, busColors, texts };
 
   }, [
@@ -265,9 +293,18 @@ const Signal = React.memo(function Signal({
 
       {/* Main Signal Path */}
       <path
-        d={points}
+        d={points[0]}
         stroke={lineColor}
         fill="none"
+        strokeWidth={lineWidth}
+      />
+
+      {/* Complementary signal path */}
+      <path
+        d={points[1]}
+        stroke={lineColor}
+        fill="none"
+        strokeDasharray="4 4"
         strokeWidth={lineWidth}
       />
 

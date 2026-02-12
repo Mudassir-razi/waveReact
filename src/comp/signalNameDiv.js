@@ -25,21 +25,55 @@ export default function SignalNameDiv({pos, signalNames, hierarchy, maxLevel, he
                     fill={bgColor}
                 />
 
-                {signalNames.map((name, i) => (
-                <text
-                    key={i}
-                    x={0}                   
-                    y={0}           
-                    fill={textColor}
-                    textAnchor="end"
-                    fontSize={14}
-                    fontFamily="monospace"
-                    transform={`translate(${nameOffset}, ${(i+1) * (config.dy + config.offsetY)})`}
-                >
-                    {name}
-                </text>
-                   
-                ))}
+                {signalNames.map((name, i) => {
+                  const splitName = name.split(' ');
+                  const diff = 0.3;
+                  if(splitName.length === 1){
+                  return (
+                    <text
+                      key={i}
+                      x={0}                   
+                      y={0}           
+                      fill={textColor}
+                        textAnchor="end"
+                        fontSize={14}
+                        fontFamily="monospace"
+                        transform={`translate(${nameOffset}, ${(i+1) * (config.dy + config.offsetY)})`}
+                    >
+                        {name}
+                    </text>
+                )}
+                    else{
+                        return (
+                            <>
+                            <text
+                            key={i}
+                            x={0}                   
+                            y={0}           
+                            fill={textColor}
+                                textAnchor="end"
+                                fontSize={14}
+                                fontFamily="monospace"
+                                transform={`translate(${nameOffset}, ${(i+1-diff) * (config.dy + config.offsetY)})`}
+                            >
+                                {splitName[0]}
+                            </text>
+                            <text
+                            key={i}
+                            x={0}                   
+                            y={0}           
+                            fill={textColor}
+                                textAnchor="end"
+                                fontSize={14}
+                                fontFamily="monospace"
+                                transform={`translate(${nameOffset}, ${(i+1+diff) * (config.dy + config.offsetY)})`}
+                            >
+                                {splitName[1]}
+                            </text>
+                            </>
+                        )
+                    }
+                })}
                 {hierarchy.map((b, i) => (
                     <RightBracket bracket={b} config={config} color={textColor}></RightBracket>
                 ))}

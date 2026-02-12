@@ -76,7 +76,9 @@ function configureHierarchy(signals, level=0)
         else if(typeof signal === 'object'){
             if(Object.keys(signal).length !== 0){
                 signalNameList.push(signal.name);
-                maxNameLength = max(maxNameLength, signal.name.length);
+                const splitName = signal.name.split(' ');
+                const tempMaxLen = splitName.length === 1 ? signal.name.length : max(splitName[0].length, splitName[1].length);
+                maxNameLength = max(maxNameLength, tempMaxLen);
             }
             //if it's empty signal, just put empty space
             else signalNameList.push(" ");
@@ -160,7 +162,7 @@ function expandDataPatterns(input) {
  * expands patterns liike (a, 3) to aaa
  * @param {string} input Input code string from the wave key of the waveform
 */
-function expandWavePattern(input) {
+export function expandWavePattern(input) {
   return input.replace(/\(([^,]+),\s*(\d+)\)/g, (_, pattern, count) => {
     return pattern.repeat(parseInt(count));
   });

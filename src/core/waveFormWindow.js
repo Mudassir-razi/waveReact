@@ -6,7 +6,8 @@ import { useState, useEffect, useRef } from "react";
 import {getHierarchy, getSignalNames, getMaxLevel, getMaxNameLength, standardizeSignal, getMaxWaveLength} from "./waveFormWindowManager";
 import {Box} from '@mui/material';
 
-export default function WaveFormWindow({signals, config, hscrollValue, vscrollValue})
+
+export default function WaveFormWindow({signals, config, hscrollValue, vscrollValue, mouseDownSVG, mouseUpSVG})
 {
     //To calculate viewport size
     const containerRef = useRef(null);
@@ -58,7 +59,7 @@ export default function WaveFormWindow({signals, config, hscrollValue, vscrollVa
     const viewPortWidth = config.dx * (maxWaveLength + 15 > 56 ? 56 : maxWaveLength + 15);
     const viewPortHPos = (hscrollValue / 100) * (waveFormSVGWidth - viewPortWidth);
 
-    console.log(viewPortHPos, waveFormSVGWidth, viewPortWidth, maxWaveLength);
+    //console.log(viewPortHPos, waveFormSVGWidth, viewPortWidth, maxWaveLength);
 
     //console.log(nameDivWidth, maxLevel, config);
     //posSignalWindow.x = nameDivWidth;
@@ -123,6 +124,8 @@ export default function WaveFormWindow({signals, config, hscrollValue, vscrollVa
                     vpPosx={viewPortHPos}
                     
                     viewMode={false}
+                    mouseDownSVG={mouseDownSVG}
+                    mouseUpSVG={mouseUpSVG}
                 />
                 </Box>
             </Box>      
