@@ -4,8 +4,8 @@ import NavBar from "./navBar";
 import SignalEditor from "./Editor";
 import { parse2List, parse2String, checkError } from "../core/parser";
 import {manageTabs} from './tabsManager'
-import Scrollbar from "./scrollBar";
 import { modifyOnMouseEvent } from "../core/signalLogic";
+import WaveformTools from "./waveformTools";
 
 import {
   Box,
@@ -16,12 +16,10 @@ import {
   Tab,
   Button,
   Divider,
-  ToggleButtonGroup,
-  ToggleButton,
 } from "@mui/material";
 
 import WaveFormWindow from "../core/waveFormWindow";
-import { editor } from "monaco-editor";
+
 
 // Tab helpers
 function tabProps(index) {
@@ -258,38 +256,7 @@ export default function Dashboard() {
             p: 1,
           }}
         >
-          {/* Top buttons (SVG-related) */}
-          <Stack spacing={1}>
-            <ToggleButtonGroup
-              onChange={handleWaveFormButton}
-              value={waveFormButtonSelection}
-              orientation="vertical"
-              exclusive
-              sx={{
-                "& .MuiToggleButton-root": {
-                  color: "#ccc",
-                  borderColor: "#333", 
-                  "&.Mui-selected": {
-                    color: "#fff",
-                    borderColor: "#555",
-                    bgcolor: "#555",
-                  }}
-              }}
-            >
-              <ToggleButton value="10" aria-label="left aligned">
-                1/0
-              </ToggleButton>
-              <ToggleButton value="Clock" aria-label="centered">
-                Clock
-              </ToggleButton>
-              <ToggleButton value="Bus" aria-label="right aligned">
-                Bus
-              </ToggleButton>
-              <ToggleButton value="Erase" aria-label="justified">
-                Erase
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Stack>
+        <WaveformTools/>
 
           {/* Bottom buttons (Editor-related) */}
           <Stack spacing={1}>
@@ -318,7 +285,7 @@ export default function Dashboard() {
               alignItems: "left",
               justifyContent: "left",
               px: 2,
-              overflow: "clip",
+              overflow: "hidden",
               minHeight: 0,
             }}
           >
@@ -333,17 +300,6 @@ export default function Dashboard() {
                 mouseUpSVG={mouseUpSVG}
               />
             </Box>
-          </Box>
-          <Box
-            sx={{
-              width: "80%",
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Scrollbar onChange={setHscrollValue} value={hscrollValue}/>
           </Box>
           {/* Drag handle */}
           <Box

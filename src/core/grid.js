@@ -37,6 +37,82 @@ export const Grid = React.memo(function Grid({
   return <>{lines}</>;
 });
 
+
+export const TimeRuler = React.memo(function TimeRuler({
+  config,
+  maxWaveLength,
+  signalCount,
+  vpWidth,
+  vpPosx
+}) {
+
+  const { width, height, elements } = useMemo(() => {
+
+    const rulerHeight = config.rulerHeight ?? 20;
+    const svgWidth = maxWaveLength * config.dx + 1;
+
+    const ticks = [];
+    const texts = [];
+
+    for (let i = 0; i <= maxWaveLength; i++) {
+      const x = -0 + i * config.dx + 0.5;
+
+      // tick line
+      ticks.push(
+        <line
+          key={"tick-" + i}
+          x1={x}
+          y1={rulerHeight - 8}
+          x2={x}
+          y2={rulerHeight}
+          stroke="#aaa"
+          strokeWidth={1}
+          shapeRendering="crispEdges"
+        />
+      );
+
+      // label (centered between divisions)
+      texts.push(
+        <text
+          key={"text-" + i}
+          x={x}
+          y={rulerHeight - 10}
+          textAnchor="middle"
+          fontSize="10"
+          fill="#bbb"
+          style={{ userSelect: "none" }}
+        >
+          {i}
+        </text>
+      );
+    }
+
+    return {
+      width: svgWidth,
+      height: rulerHeight,
+      elements: [...ticks, ...texts]
+    };
+
+  }, [config, maxWaveLength, signalCount]);
+
+  return (
+    <svg
+      x={-10}
+      width={width}
+      height={height}
+      viewBox={`${vpPosx} 0 100% 20`}
+      style={{
+        display: "block",
+        background: "#11111100",
+        borderBottom: "1px solid #33333300"
+      }}
+    >
+      {elements}
+    </svg>
+  );
+});
+
+
 export const Cursor = React.memo(function Cursor({ mouseX, height }) {
   if (mouseX == null) return null;
 

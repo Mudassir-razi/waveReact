@@ -8,7 +8,8 @@ export default function ScrollBar({
   return (
     <Box
       sx={{
-        width: "80%",
+        width: 420,
+        justifyContent:"center",
         px: 1,
       }}
     >

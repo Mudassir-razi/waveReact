@@ -1,17 +1,18 @@
 import  SignalNameDiv from "../comp/signalNameDiv";
 import  SignalWindow from "./signal";
-
+import Scrollbar from "../comp/scrollBar";
 import { flattenSignals } from "../core/parser";
 import { useState, useEffect, useRef } from "react";
 import {getHierarchy, getSignalNames, getMaxLevel, getMaxNameLength, standardizeSignal, getMaxWaveLength} from "./waveFormWindowManager";
 import {Box} from '@mui/material';
 
 
-export default function WaveFormWindow({signals, config, hscrollValue, vscrollValue, mouseDownSVG, mouseUpSVG})
+export default function WaveFormWindow({signals, config, vscrollValue, mouseDownSVG, mouseUpSVG})
 {
     //To calculate viewport size
     const containerRef = useRef(null);
     const [viewport, setViewport] = useState({ width: 0, height: 0 });
+    const[hscrollValue, setHscrollValue] = useState(0);
 
     //take data
     const [flatSignalData, setFlatSignalData] = useState([]);
@@ -103,11 +104,14 @@ export default function WaveFormWindow({signals, config, hscrollValue, vscrollVa
                 <Box
                 ref={containerRef}
                 sx={{
+                    display:"flex",
+                    flexDirection: "column",
                     flex: 1,
                     minWidth: 0,     // IMPORTANT for horizontal overflow
                     minHeight: 0,
                     overflow: "hidden",
-                    position: "relative"
+                    position: "relative",
+                    justifyContent: "space-between",
                 }}
                 >
                 <SignalWindow
@@ -127,14 +131,13 @@ export default function WaveFormWindow({signals, config, hscrollValue, vscrollVa
                     mouseDownSVG={mouseDownSVG}
                     mouseUpSVG={mouseUpSVG}
                 />
+                          
+                <Scrollbar onChange={setHscrollValue} value={hscrollValue}/>
+
                 </Box>
             </Box>      
-            </Box>
+        </Box>
 
     );
 }
 
-function clip(value, lim)
-{
-    return value < lim ? value : lim;
-}

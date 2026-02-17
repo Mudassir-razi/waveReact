@@ -1,7 +1,7 @@
 import { getShapeSegment, getLineSegment, getShapeSegmentForce, initRender } from "./segmentRenderer";
 import { getTextSegment, initTextRenderer, getTextSegmentForce } from "./segmentTextRenderer";
 import { useEffect, useRef, useState } from "react";
-import {Grid, Cursor} from './grid';
+import {Grid, Cursor, TimeRuler} from './grid';
 import React, { useMemo } from "react";
 
 const div = 4;
@@ -63,6 +63,14 @@ export default function SignalWindow({pos, signals, config, maxWaveLength, heigh
   };
 
   return(
+    <g>
+      <TimeRuler
+        config={config}
+        maxWaveLength={maxWaveLength}
+        signalCount={signals.length}
+        vpPosx={vpPosx}
+        vpWidth={vpWidth}
+      />
       <svg 
       ref={signalWindowRef} 
       id="mainLayer" 
@@ -89,7 +97,8 @@ export default function SignalWindow({pos, signals, config, maxWaveLength, heigh
         maxWaveLength={maxWaveLength}
         viewMode={viewMode}
       />
-    </svg>
+      </svg>
+    </g>
   );
 }
 
