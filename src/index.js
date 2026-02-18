@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import Dashboard from './comp/dashboard';
 import reportWebVitals from './reportWebVitals';
+import TestApp from './TestApp';
 
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';

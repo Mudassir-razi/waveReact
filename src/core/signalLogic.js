@@ -14,16 +14,9 @@ export function modifyOnMouseEvent(signals, timeStamp, signalIdx, timeStampPrev,
 
     if (timeStampPrev === timeStamp) {
         // Single click
-        switch (action) {
-            case "10": {
-                const currentSymbol = getEffectiveSymbol(currentWave, timeStamp);
-                const newVal = currentSymbol === '0' ? '1' : '0';
-                newWave = setRange(currentWave, timeStamp, timeStamp, newVal);
-                break;
-            }
-            default:
-                break;
-        }
+        const currentSymbol = getEffectiveSymbol(currentWave, timeStamp);
+        const newVal = currentSymbol === action ? currentSymbol : action;
+        newWave = setRange(currentWave, timeStamp, timeStamp, newVal); 
     } else {
         // Click and drag
         switch (action) {

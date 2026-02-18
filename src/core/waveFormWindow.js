@@ -1,5 +1,6 @@
 import  SignalNameDiv from "../comp/signalNameDiv";
 import  SignalWindow from "./signal";
+import { TimeRuler } from "./grid";
 import Scrollbar from "../comp/scrollBar";
 import { flattenSignals } from "../core/parser";
 import { useState, useEffect, useRef } from "react";
@@ -7,12 +8,33 @@ import {getHierarchy, getSignalNames, getMaxLevel, getMaxNameLength, standardize
 import {Box} from '@mui/material';
 
 
-export default function WaveFormWindow({signals, config, vscrollValue, mouseDownSVG, mouseUpSVG})
+export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSVG})
 {
     //To calculate viewport size
     const containerRef = useRef(null);
-    const [viewport, setViewport] = useState({ width: 0, height: 0 });
-    const[hscrollValue, setHscrollValue] = useState(0);
+    const[viewport, setViewport] = useState({});
+    //.....................................Custom scroll....................
+    const scrollRef = useRef(null);
+    const rulerRef = useRef(null);
+    const namesRef = useRef(null);
+
+    useEffect(() => {
+        const node = scrollRef.current;
+
+        const handleScroll = () => {
+        const { scrollTop, scrollLeft } = node;
+
+        rulerRef.current.style.transform =
+            `translateX(${-scrollLeft}px)`;
+
+        namesRef.current.style.transform =
+            `translateY(${-scrollTop}px)`;
+        };
+
+        node.addEventListener("scroll", handleScroll);
+        return () => node.removeEventListener("scroll", handleScroll);
+    }, []);
+//...............................................................................
 
     //take data
     const [flatSignalData, setFlatSignalData] = useState([]);
@@ -52,92 +74,95 @@ export default function WaveFormWindow({signals, config, vscrollValue, mouseDown
     const maxNameLength = getMaxNameLength();
     const maxWaveLength = getMaxWaveLength(standardSignal);
 
-    const height = (standardSignal.length+1) * (config.dy + config.offsetY);
     const nameDivWidth = (maxLevel + 1) * config.indentPerLevel + maxNameLength * config.charWidth;
-    
-    
+    const rulerHeight  = 20;    
     const waveFormSVGWidth = (maxWaveLength + 15) * config.dx;
-    const viewPortWidth = config.dx * (maxWaveLength + 15 > 56 ? 56 : maxWaveLength + 15);
-    const viewPortHPos = (hscrollValue / 100) * (waveFormSVGWidth - viewPortWidth);
-
-    //console.log(viewPortHPos, waveFormSVGWidth, viewPortWidth, maxWaveLength);
-
-    //console.log(nameDivWidth, maxLevel, config);
-    //posSignalWindow.x = nameDivWidth;
-
+    const waveformSVGHeight = (standardSignal.length+1) * (config.dy + config.offsetY);
+    
     return (
         <Box
+        sx={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            overflow: "hidden",
+            bgcolor: "black"
+        }}
+        >
+        {/* LEFT NAME PANEL */}
+        <Box
             sx={{
-                display: "flex",
-                flexDirection: "column",
-                height: "100%",     
-                minHeight: 0,       
+            width: nameDivWidth,
+            height: "100%",         
+            overflow: "hidden",
+            position: "relative",
+            flexShrink: 0
             }}
-            >
-            <Box
-                sx={{
-                display: "flex",
-                flexDirection: "row",
-                flex: 1,
-                minHeight: 0, 
-                }}
-            >
-                <Box
-                sx={{
-                    width: nameDivWidth, 
-                    flexShrink: 0,
-                }}
-                >
-                <SignalNameDiv
-                    pos={posNameDiv}
-                    signalNames={signalNames}
-                    hierarchy={hierarchy}
-                    maxLevel={maxLevel}
-                    height={height}
-                    width={nameDivWidth}
-                    config={config}
-                    viewMode={false}
-                />
-                </Box>
-
-                {/* Right: Signal window */}
-                <Box
-                ref={containerRef}
-                sx={{
-                    display:"flex",
-                    flexDirection: "column",
-                    flex: 1,
-                    minWidth: 0,     // IMPORTANT for horizontal overflow
-                    minHeight: 0,
-                    overflow: "hidden",
-                    position: "relative",
-                    justifyContent: "space-between",
-                }}
-                >
-                <SignalWindow
-                    pos={posSignalWindow}
-                    signals={standardSignal}
-                    maxWaveLength={maxWaveLength}
-                    config={config}
-
-                    height={height}
-                    width={waveFormSVGWidth}
-                    
-                    vpHeight={height}
-                    vpWidth={viewPortWidth}
-                    vpPosx={viewPortHPos}
-                    
-                    viewMode={false}
-                    mouseDownSVG={mouseDownSVG}
-                    mouseUpSVG={mouseUpSVG}
-                />
-                          
-                <Scrollbar onChange={setHscrollValue} value={hscrollValue}/>
-
-                </Box>
-            </Box>      
+        >
+            <SignalNameDiv
+                ref={namesRef}
+                pos={posNameDiv}
+                signalNames={signalNames}
+                hierarchy={hierarchy}
+                height={waveformSVGHeight}
+                width={nameDivWidth}
+                config={config}
+                viewMode={false}
+            />
         </Box>
 
+        {/* RIGHT SIDE */}
+        <Box
+            sx={{
+            flex: 1,
+            display: "flex",
+            minWidth:0,
+            flexDirection: "column",
+            height: "100%"   
+            }}
+        >
+            {/* RULER */}
+            <Box
+            sx={{
+                height: rulerHeight,
+                overflow: "hidden",
+                position: "relative",
+                flexShrink: 0
+            }}
+            >
+            <TimeRuler
+                ref={rulerRef}
+                config={config}
+                maxWaveLength={maxWaveLength}
+            />
+            </Box>
+
+            {/* MAIN SCROLL OWNER */}
+            <Box
+            ref={scrollRef}
+            sx={{
+                flex: 1,
+                overflow: "auto",
+                minHeight: 0  
+            }}
+            >
+            <SignalWindow
+                ref={scrollRef}
+                pos={posSignalWindow}
+                signals={standardSignal}
+                maxWaveLength={maxWaveLength}
+                config={config}
+
+                height={waveformSVGHeight}
+                width={waveFormSVGWidth}
+                
+                viewMode={false}
+                mouseDownSVG={mouseDownSVG}
+                mouseUpSVG={mouseUpSVG}
+
+            />
+            </Box>
+        </Box>
+        </Box>
     );
 }
-

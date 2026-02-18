@@ -1,8 +1,8 @@
 import { getShapeSegment, getLineSegment, getShapeSegmentForce, initRender } from "./segmentRenderer";
 import { getTextSegment, initTextRenderer, getTextSegmentForce } from "./segmentTextRenderer";
-import { useEffect, useRef, useState } from "react";
-import {Grid, Cursor, TimeRuler} from './grid';
+import { forwardRef, useEffect, useRef, useState } from "react";
 import React, { useMemo } from "react";
+import {Grid, Cursor} from "./grid";
 
 const div = 4;
 //coordinate lookup table
@@ -23,10 +23,14 @@ const busColorScheme = {
   'x' : `url(#${patternId})`
 };
 
-//returns the main layer of the canvas, with all the signals rendered onto it
-export default function SignalWindow({pos, signals, config, maxWaveLength, height, width, vpHeight, vpWidth, vpPosx, viewMode, mouseDownSVG, mouseUpSVG})
+export function getBuses()
 {
-  const signalWindowRef = useRef(null);
+  return busColorScheme;
+}
+
+//returns the main layer of the canvas, with all the signals rendered onto it
+const SignalWindow = forwardRef(({pos, signals, config, maxWaveLength, height, width, viewMode, mouseDownSVG, mouseUpSVG}, signalWindowRef) => 
+{
   const [mouseX, setMouseX] = useState(null);
 
   // Track mouse movement inside SVG
@@ -63,52 +67,43 @@ export default function SignalWindow({pos, signals, config, maxWaveLength, heigh
   };
 
   return(
-    <g>
-      <TimeRuler
-        config={config}
-        maxWaveLength={maxWaveLength}
-        signalCount={signals.length}
-        vpPosx={vpPosx}
-        vpWidth={vpWidth}
-      />
-      <svg 
-      ref={signalWindowRef} 
-      id="mainLayer" 
-      x={pos.x}
-      y={pos.y}
-      width={"100%"} 
-      height={height} 
-      viewBox={`${vpPosx} 0 ${vpWidth} ${vpHeight}`}
-      style={{ display: "block", backgroundColor: "#00000000" }}
-      onMouseMove={handleMouseMove}
-      onMouseDown={handleClick}
-      onMouseUp={handleClickUp}
-    >
-      <DiagonalHatchPattern/>
-      <Grid
-        config={config}
-        maxWaveLength={maxWaveLength}
-        signalCount={signals.length}
-      />
-      <Cursor mouseX={mouseX} height={height} />
-      <AllSignals
-        signals={signals}
-        config={config}
-        maxWaveLength={maxWaveLength}
-        viewMode={viewMode}
-      />
-      </svg>
-    </g>
-  );
-}
+    <svg 
+    ref={signalWindowRef} 
+    id="mainLayer" 
+    x={pos.x}
+    y={pos.y}
+    width={width} 
+    height={height} 
+    style={{ display: "block", backgroundColor: "#00000000" }}
+    onMouseMove={handleMouseMove}
+    onMouseDown={handleClick}
+    onMouseUp={handleClickUp}
+  >
+    <DiagonalHatchPattern/>
+    <Grid
+      config={config}
+      maxWaveLength={maxWaveLength}
+      signalCount={signals.length}
+    />
+    <Cursor mouseX={mouseX} height={height} />
+    <AllSignals
+      signals={signals}
+      config={config}
+      maxWaveLength={maxWaveLength}
+      viewMode={viewMode}
+    />
+    </svg>
 
+  );
+});
+
+export default SignalWindow;
 
 const AllSignals = React.memo(function AllSignals({
   signals,
   config,
   maxWaveLength,
   viewMode,
-  xGenDone = false
 }) {
 
   const renderedSignals = useMemo(() => {

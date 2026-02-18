@@ -2,9 +2,10 @@
 //const baseX = 20; // Base X position for rendering
 //const indentPerLevel = 20; // Indentation per nesting level
 //const charWidth = 6; // Width of the bracket
+import { forwardRef } from "react";
 
-export default function SignalNameDiv({pos, signalNames, hierarchy, maxLevel, height, width, config, viewMode=true}) {
-
+const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, config, viewMode}, ref) =>
+{
     const namePlateWidth = width;
     const namePlateHeight= height;
     const nameOffset = width - 20;//maxLevel * config.indentPerLevel + config.nameStart;
@@ -13,10 +14,12 @@ export default function SignalNameDiv({pos, signalNames, hierarchy, maxLevel, he
 
         return (
             <svg
+                ref={ref}
                 x={pos.x}
                 y={pos.y}
                 width={namePlateWidth}
                 height={namePlateHeight}
+                display="block"
             >
                 <rect
                     key={'backDropNameDiv'}
@@ -79,8 +82,9 @@ export default function SignalNameDiv({pos, signalNames, hierarchy, maxLevel, he
                 ))}
             </svg>
         );
-}
+});
 
+export default SignalNameDiv;
 
 function RightBracket({ bracket, config, color }) {
   

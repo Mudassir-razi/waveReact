@@ -6,6 +6,7 @@ import { parse2List, parse2String, checkError } from "../core/parser";
 import {manageTabs} from './tabsManager'
 import { modifyOnMouseEvent } from "../core/signalLogic";
 import WaveformTools from "./waveformTools";
+import TestApp from "../TestApp";
 
 import {
   Box,
@@ -108,10 +109,6 @@ export default function Dashboard() {
   //......................................................................................................................................
   
   const [currentSignalData, setCurrentSignalData] = useState([]);
-  const [hscrollValue, setHscrollValue] = useState(0);
-  const [vscrollValue, setVscrollValue] = useState(0);
-  const [maxHscroll, setMaxHscroll] = useState(100);
-  const [maxVscroll, setMaxVscroll] = useState(100);
 
   const [editorHeight, setEditorHeight] = useState(240);
   const isResizing = useRef(false);
@@ -184,7 +181,7 @@ export default function Dashboard() {
 
   return (
     <Container maxWidth={false} disableGutters sx={{ bgcolor: "#1e1e1e", height: "100vh" }}>
-      <Stack spacing={0} height="100%">
+      <Stack spacing={0} sx={{height:"100%"}}>
 
         {/* Banner */}
         <Box
@@ -242,6 +239,7 @@ export default function Dashboard() {
           display: "flex",
           flexDirection: "row",
           height: "100%",
+          minHeight:0,
         }}
       >
         {/* LEFT COLUMN — spans top to bottom */}
@@ -256,7 +254,7 @@ export default function Dashboard() {
             p: 1,
           }}
         >
-        <WaveformTools/>
+        <WaveformTools setParentTool={handleWaveFormButton}/>
 
           {/* Bottom buttons (Editor-related) */}
           <Stack spacing={1}>
@@ -289,17 +287,12 @@ export default function Dashboard() {
               minHeight: 0,
             }}
           >
-            <Box>
-              <WaveFormWindow 
-                signals={currentSignalData}
-                config={canvasConfig}
-                hscrollValue={hscrollValue}
-                vscrollValue={vscrollValue}
-                
-                mouseDownSVG={mouseDownSVG}
-                mouseUpSVG={mouseUpSVG}
-              />
-            </Box>
+            <WaveFormWindow
+              signals={currentSignalData}
+              config={canvasConfig}
+              mouseDownSVG={mouseDownSVG}
+              mouseUpSVG={mouseUpSVG}
+            />
           </Box>
           {/* Drag handle */}
           <Box
@@ -328,8 +321,6 @@ export default function Dashboard() {
           </Box>
         </Box>
       </Box>
-
-
       
       {/* Tabs bar */}
       <Box
@@ -379,8 +370,6 @@ export default function Dashboard() {
           +
         </Button>
       </Box>
-
-
       </Stack>
     </Container>
   );
