@@ -8,31 +8,40 @@ export function modifyOnMouseEvent(signals, timeStamp, signalIdx, timeStampPrev,
 
     const flatSignals = flattenSignals(signals);
     const currentSignal = flatSignals[signalIdx];
-    const currentWave = expandWavePattern(currentSignal.wave);
+    const splittedWave = expandWavePattern(currentSignal.wave).split(' '); 
+    const currentWave = splittedWave[0];
+    const complimentaryWave = splittedWave.length === 2 ? " "+ splittedWave[1] : "";
 
     let newWave = currentWave;
 
     if (timeStampPrev === timeStamp) {
+
         // Single click
-        const currentSymbol = getEffectiveSymbol(currentWave, timeStamp);
-        const newVal = currentSymbol === action ? currentSymbol : action;
-        newWave = setRange(currentWave, timeStamp, timeStamp, newVal); 
+        if(action === 'erase')
+        {
+
+        }
+        
+        else if(timeStamp < currentWave.length){
+            const currentSymbol = getEffectiveSymbol(currentWave, timeStamp);
+            const newVal = currentSymbol === action ? currentSymbol : action;
+            newWave = setRange(currentWave, timeStamp, timeStamp, newVal); 
+        }
+        else{
+            //extend the signal
+            const dot = ".";
+            newWave = currentWave + dot.repeat(timeStamp-currentWave.length+1);
+        }
     } else {
         // Click and drag
-        switch (action) {
-            case "10": {
-                const val = getEffectiveSymbol(currentWave, timeStampPrev);
-                const start = Math.min(timeStampPrev, timeStamp);
-                const end = Math.max(timeStampPrev, timeStamp);
-                newWave = setRange(currentWave, start, end, val);
-                break;
-            }
-            default:
-                break;
-        }
+        const val = getEffectiveSymbol(currentWave, timeStampPrev);
+        const start = Math.min(timeStampPrev, timeStamp);
+        const end = Math.max(timeStampPrev, timeStamp);
+        newWave = setRange(currentWave, start, end, val);
+
     }
 
-    return updateSignalAtIndex(structuredClone(signals), signalIdx, newWave);
+    return updateSignalAtIndex(structuredClone(signals), signalIdx, newWave+complimentaryWave);
 }
 
 // ─── Core helpers ────────────────────────────────────────────────
@@ -102,18 +111,6 @@ function setRange(wave, start, end, val) {
     const arr = expanded.split('');
     for (let i = start; i <= end; i++) arr[i] = val;
     return compressWave(arr.join(''));
-}
-
-/**
- * getActual — kept for API compatibility.
- * Returns [prev, current, next] effective symbols.
- */
-function getActual(wave, index) {
-    const expanded = expandWave(wave);
-    const prev    = index > 0                   ? expanded[index - 1] : ' ';
-    const current = expanded[index]             ?? ' ';
-    const next    = index + 1 < expanded.length ? expanded[index + 1] : ' ';
-    return [prev, current, next];
 }
 
 // ─── Unchanged ───────────────────────────────────────────────────

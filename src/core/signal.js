@@ -190,7 +190,7 @@ const Signal = React.memo(function Signal({
 
       //deal with complementary signal
       if(current === ' ' && wave[i+1] === '~' && complement === false){complement = true; i = -1; continue;}
-      if(complement) current = current === '1' ? '0' : (current === '0' ? '1' : (current === '.' ? '.' : '-')); 
+      if(complement) current = getComplement(current);
       
       const dxScaled = UnscaledDx * scale;
 
@@ -360,6 +360,25 @@ function DiagonalHatchPattern({
   );
 }
 
+function getComplement(bit)
+{
+  var comp = '-';
+  switch(bit)
+  {
+    case '1': {comp = '0';break;}
+    case '0': {comp = '1';break;}
+    case 'p': {comp = 'n';break;}
+    case 'n': {comp = 'p';break;}
+    case 'h': {comp = 'l';break;}
+    case 'l': {comp = 'h';break;}
+    case 'P': {comp = 'N';break;}
+    case 'N': {comp = 'P';break;}
+    case 'H': {comp = 'L';break;}
+    case 'L': {comp = 'H';break;}
+    default : {comp = bit;break;}
+  }
+  return comp;
+}
 
 function darkenHexColor(hex, percent) {
     // Remove '#' if present

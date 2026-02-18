@@ -23,15 +23,18 @@ const BTN = {
   },
 };
 
-export default function WaveformTools(setParentTool) {
+export default function WaveformTools({setParentTool}) {
   const [tool, setTool] = useState("1");
   const [bus, setBus] = useState(8);
-
+  const onChangeButton = (event, value) => {
+    setTool(value);
+    setParentTool(event, value);
+  }
   return (
     <ToggleButtonGroup
       value={tool}
       exclusive
-      onChange={(_, v) => v && setTool(v) && setParentTool(_ ,v)}
+      onChange={(_, v) => v && onChangeButton(_, v)}
       sx={{
         width: "100%",
         border: "1px solid #222",

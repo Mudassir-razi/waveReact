@@ -3,10 +3,9 @@ import { useRef, useState, useEffect } from "react";
 import NavBar from "./navBar";
 import SignalEditor from "./Editor";
 import { parse2List, parse2String, checkError } from "../core/parser";
-import {manageTabs} from './tabsManager'
+import {manageTabs} from '../core/tabsManager'
 import { modifyOnMouseEvent } from "../core/signalLogic";
 import WaveformTools from "./waveformTools";
-import TestApp from "../TestApp";
 
 import {
   Box,
@@ -226,9 +225,7 @@ export default function Dashboard() {
           }}
         >
           <NavBar title="File" />
-          <NavBar title="Edit" />
           <NavBar title="View" />
-          <NavBar title="Tools" />
           <NavBar title="Help" />
         </Box>
 

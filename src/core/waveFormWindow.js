@@ -38,8 +38,6 @@ export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSV
 
     //take data
     const [flatSignalData, setFlatSignalData] = useState([]);
-    var posNameDiv       = {x : 0, y : 0};
-    var posSignalWindow  = {x : 0, y : 0};
 
     const signalCopyData = structuredClone(signals);
 
@@ -78,6 +76,8 @@ export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSV
     const rulerHeight  = 20;    
     const waveFormSVGWidth = (maxWaveLength + 15) * config.dx;
     const waveformSVGHeight = (standardSignal.length+1) * (config.dy + config.offsetY);
+    var posNameDiv       = {x : 0, y : rulerHeight};
+    var posSignalWindow  = {x : 0, y : 0};
     
     return (
         <Box
@@ -86,7 +86,7 @@ export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSV
             height: "100%",
             display: "flex",
             overflow: "hidden",
-            bgcolor: "black"
+            bgcolor: "transparent"
         }}
         >
         {/* LEFT NAME PANEL */}
@@ -159,7 +159,6 @@ export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSV
                 viewMode={false}
                 mouseDownSVG={mouseDownSVG}
                 mouseUpSVG={mouseUpSVG}
-
             />
             </Box>
         </Box>

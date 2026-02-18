@@ -4,6 +4,8 @@
 //const charWidth = 6; // Width of the bracket
 import { forwardRef } from "react";
 
+
+
 const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, config, viewMode}, ref) =>
 {
     const namePlateWidth = width;
@@ -41,7 +43,7 @@ const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, c
                         textAnchor="end"
                         fontSize={14}
                         fontFamily="monospace"
-                        transform={`translate(${nameOffset}, ${(i+1) * (config.dy + config.offsetY)})`}
+                        transform={`translate(${nameOffset}, ${(i+1) * (config.dy + config.offsetY) + pos.y})`}
                     >
                         {name}
                     </text>
@@ -57,7 +59,7 @@ const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, c
                                 textAnchor="end"
                                 fontSize={14}
                                 fontFamily="monospace"
-                                transform={`translate(${nameOffset}, ${(i+1-diff) * (config.dy + config.offsetY)})`}
+                                transform={`translate(${nameOffset}, ${(i+1-diff) * (config.dy + config.offsetY) + pos.y})`}
                             >
                                 {splitName[0]}
                             </text>
@@ -69,7 +71,7 @@ const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, c
                                 textAnchor="end"
                                 fontSize={14}
                                 fontFamily="monospace"
-                                transform={`translate(${nameOffset}, ${(i+1+diff) * (config.dy + config.offsetY)})`}
+                                transform={`translate(${nameOffset}, ${(i+1+diff) * (config.dy + config.offsetY) + pos.y})`}
                             >
                                 {splitName[1]}
                             </text>
@@ -78,7 +80,8 @@ const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, c
                     }
                 })}
                 {hierarchy.map((b, i) => (
-                    <RightBracket bracket={b} config={config} color={textColor}></RightBracket>
+
+                    <RightBracket bracket={b} config={config} color={textColor} posy={pos.y}></RightBracket>
                 ))}
             </svg>
         );
@@ -86,7 +89,7 @@ const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, c
 
 export default SignalNameDiv;
 
-function RightBracket({ bracket, config, color }) {
+function RightBracket({ bracket, config, color, posy }) {
   
     if(!Object.keys(bracket).includes('text'))return null;
     const groupText = typeof bracket.text === 'string' ? bracket.text : " ";
@@ -96,9 +99,9 @@ function RightBracket({ bracket, config, color }) {
     const midY = (config.dy + config.offsetY) * (((bracket.start + bracket.end) / 2) + 1);
     
     const d = `
-        M ${x} ${((bracket.start + 1) * (config.dy + config.offsetY)) - 10}
+        M ${x} ${((bracket.start + 1) * (config.dy + config.offsetY)) - 10 + posy}
         h ${-arm}
-        V ${((bracket.end + 1) * (config.dy + config.offsetY)) + 10}
+        V ${((bracket.end + 1) * (config.dy + config.offsetY)) + 10 + posy}
         h ${arm}
     `;
 
@@ -120,7 +123,7 @@ function RightBracket({ bracket, config, color }) {
             fontSize={12}
             dominantBaseline="middle"
             textAnchor="middle"
-            transform={`translate(${x - (3*arm)}, ${midY}) rotate(-90)`}
+            transform={`translate(${x - (3*arm)}, ${midY + posy}) rotate(-90)`}
             >
             {groupText}
         </text>

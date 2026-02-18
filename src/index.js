@@ -3,12 +3,40 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import Dashboard from './comp/dashboard';
 import reportWebVitals from './reportWebVitals';
-import TestApp from './TestApp';
-
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
 const theme = createTheme({
+
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        /* Works in Chrome, Edge, Safari */
+        "*::-webkit-scrollbar": {
+          width: "10px",
+          height: "20px",
+        },
+        "*::-webkit-scrollbar-track": {
+          background: "#1e1e1e",
+        },
+        "*::-webkit-scrollbar-thumb": {
+          backgroundColor: "#555",
+          borderRadius: "6px",
+          border: "2px solid #1e1e1e",
+        },
+        "*::-webkit-scrollbar-thumb:hover": {
+          backgroundColor: "#777",
+        },
+
+        /* Firefox */
+        "*": {
+          scrollbarWidth: "thin",
+          scrollbarColor: "#555 #1e1e1e",
+        },
+      },
+    },
+  },
+
   palette: {
     primary: {
       main: '#1976d2',

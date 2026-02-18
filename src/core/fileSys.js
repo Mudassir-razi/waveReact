@@ -1,180 +1,65 @@
-/**
- * Combines SVG objects and saves it in the device
- * @param {svg} signalSvg -SVG component that has the waveform 
- * @param {svg} gridSvg -SVG component that holds the background grid 
- * @param {svg} nameSvg -SVG component that holds the names of the signals 
- * @param {string} filename -Output filename 
- */
-export function combineAndSaveSVG(signalSvg, gridSvg, nameSvg, filename = 'combined.svg', viewMode, format="svg") {
-  const SVG_NS = 'http://www.w3.org/2000/svg';
+export function combineAndSaveSVG(
+  signalSvg,
+  gridSvg,
+  nameSvg,
+  filename = "combined.svg"
+) {
+  const SVG_NS = "http://www.w3.org/2000/svg";
 
-  // Extract widths and height
-  const nameWidth = parseFloat(nameSvg.getAttribute('width') || 0);
-  const signalWidth = parseFloat(signalSvg.getAttribute('width') || 0);
-  const gridHeight = parseFloat(gridSvg.getAttribute('height') || 0);
+  if (!signalSvg || !gridSvg || !nameSvg) return;
+
+  // Extract dimensions
+  const nameWidth = parseFloat(nameSvg.getAttribute("width")) || 0;
+  const signalWidth = parseFloat(signalSvg.getAttribute("width")) || 0;
+  const height = Math.max(
+    parseFloat(signalSvg.getAttribute("height")) || 0,
+    parseFloat(nameSvg.getAttribute("height")) || 0
+  );
+
   const totalWidth = nameWidth + signalWidth;
 
-  // Create a combined SVG
-  const combinedSVG = document.createElementNS(SVG_NS, 'svg');
-  combinedSVG.setAttribute('xmlns', SVG_NS);
-  combinedSVG.setAttribute('width', totalWidth);
-  combinedSVG.setAttribute('height', gridHeight);
-  combinedSVG.setAttribute('viewBox', `0 0 ${totalWidth} ${gridHeight}`);
+  // Create new root SVG
+  const combinedSvg = document.createElementNS(SVG_NS, "svg");
+  combinedSvg.setAttribute("xmlns", SVG_NS);
+  combinedSvg.setAttribute("width", totalWidth);
+  combinedSvg.setAttribute("height", height);
 
-  // Create background rectangle
-  const bgRect = document.createElementNS(SVG_NS, "rect");
-  bgRect.setAttribute("x", 0);
-  bgRect.setAttribute("y", 0);
-  bgRect.setAttribute("width", totalWidth);
-  bgRect.setAttribute("height", gridHeight);
-  
-  bgRect.setAttribute("fill", viewMode === 1 ? "white" : "black");
+  // Optional background
+  const bg = document.createElementNS(SVG_NS, "rect");
+  bg.setAttribute("width", totalWidth);
+  bg.setAttribute("height", height);
+  bg.setAttribute("fill", "#1e1e1e");
+  combinedSvg.appendChild(bg);
 
-  // Helper: clone and translate group
-  function cloneGroup(sourceSvg, offsetX = 0) {
-    const g = document.createElementNS(SVG_NS, 'g');
+  // Clone name SVG content
+  const nameGroup = document.createElementNS(SVG_NS, "g");
+  nameGroup.setAttribute("transform", `translate(0, 0)`);
+  nameGroup.innerHTML = nameSvg.innerHTML;
+  combinedSvg.appendChild(nameGroup);
 
-    if (offsetX !== 0) {
-      g.setAttribute('transform', `translate(${offsetX}, 0)`);
-    }
+  // Clone grid content
+  const gridGroup = document.createElementNS(SVG_NS, "g");
+  gridGroup.setAttribute("transform", `translate(${nameWidth}, 0)`);
+  gridGroup.innerHTML = gridSvg.innerHTML;
+  combinedSvg.appendChild(gridGroup);
 
-    // Copy children
-    Array.from(sourceSvg.childNodes).forEach(node => {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        g.appendChild(node.cloneNode(true));
-      }
-    });
+  // Clone signal content
+  const signalGroup = document.createElementNS(SVG_NS, "g");
+  signalGroup.setAttribute("transform", `translate(${nameWidth}, 0)`);
+  signalGroup.innerHTML = signalSvg.innerHTML;
+  combinedSvg.appendChild(signalGroup);
 
-    return g;
-  }
-
-  // Step 1: grid (shifted right)
-  const gridGroup = cloneGroup(gridSvg, nameWidth);
-  removeSvgChildrenById(gridGroup, ['selectionRect', 'selectionLine1', 'selectionLine2']);
-  // Step 2: signal (shifted right)
-  const signalGroup = cloneGroup(signalSvg, nameWidth);
-
-  // Step 3: name (at x = 0)
-  const nameGroup = cloneGroup(nameSvg, 0);
-  nameGroup.setAttribute("font-family", "monospace");
-  nameGroup.setAttribute("font-weight", "bold");
-
-  // Append layers in back-to-front order
-  combinedSVG.appendChild(bgRect);      // Background color
-  combinedSVG.appendChild(gridGroup);   // back
-  combinedSVG.appendChild(signalGroup); // middle
-  combinedSVG.appendChild(nameGroup);   // front
-
-
-  // Serialize and download
+  // Serialize
   const serializer = new XMLSerializer();
-  const svgString = serializer.serializeToString(combinedSVG);
+  const svgString = serializer.serializeToString(combinedSvg);
 
-
-  if (format === "svg") {
-    // Download as SVG
-    const blob = new Blob([svgString], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}.svg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-  } else if (format === "png") {
-    // Convert to PNG using a canvas
-    const img = new Image();
-    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(svgBlob);
-
-    img.onload = function () {
-      const canvas = document.createElement("canvas");
-      canvas.width = totalWidth;
-      canvas.height = gridHeight;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-
-      canvas.toBlob((blob) => {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `${filename}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }, "image/png");
-
-      URL.revokeObjectURL(url);
-    };
-    img.src = url;
-  }
-}
-
-/**
- * 
- * @returns Opens up a json file
- */
-export function openJSONFile() {
-  return new Promise((resolve, reject) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json,application/json";
-    input.style.display = "none";
-
-    input.onchange = async (event) => {
-      const file = event.target.files[0];
-      if (!file) {
-        reject(new Error("No file selected"));
-        return;
-      }
-
-      try {
-        const text = await file.text();
-        const json = JSON.parse(text);
-        resolve(json);
-      } catch (err) {
-        reject(new Error("Invalid JSON file"));
-      } finally {
-        document.body.removeChild(input);
-      }
-    };
-
-    input.onerror = () => {
-      reject(new Error("File input error"));
-      document.body.removeChild(input);
-    };
-
-    document.body.appendChild(input);
-    input.click();
-  });
-}
-
-
-/**
- * 
- * @param {JSON} data -JSON data to save
- * @param {string} filename -name of the file 
- */
-export function saveJSONFile(data, filename = "data.json") {
-  const json = JSON.stringify(data, null, 2); // pretty-print with 2-space indent
-  const blob = new Blob([json], { type: "application/json" });
+  const blob = new Blob([svgString], { type: "image/svg+xml" });
   const url = URL.createObjectURL(blob);
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
 
-  URL.revokeObjectURL(url); // cleanup
-}
-
-
-function removeSvgChildrenById(svgElement, idsToRemove) {
-  idsToRemove.forEach(id => {
-    const element = svgElement.querySelector(`#${id}`);
-    if (element) {
-      element.remove(); // Remove the element from the DOM
-    }
-  });
+  URL.revokeObjectURL(url);
 }
