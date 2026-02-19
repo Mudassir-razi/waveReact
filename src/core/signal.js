@@ -29,7 +29,7 @@ export function getBuses()
 }
 
 //returns the main layer of the canvas, with all the signals rendered onto it
-const SignalWindow = forwardRef(({pos, signals, config, maxWaveLength, height, width, viewMode, mouseDownSVG, mouseUpSVG}, signalWindowRef) => 
+const SignalWindow = forwardRef(({pos, signals, config, maxWaveLength, height, width, viewMode, mouseDownSVG, mouseUpSVG}, ref) => 
 {
   const [mouseX, setMouseX] = useState(null);
 
@@ -68,12 +68,13 @@ const SignalWindow = forwardRef(({pos, signals, config, maxWaveLength, height, w
 
   return(
     <svg 
-    ref={signalWindowRef} 
+    ref={ref} 
     id="mainLayer" 
     x={pos.x}
     y={pos.y}
     width={width} 
-    height={height} 
+    height={height}
+    viewBox={`0 0 ${width} ${height}`}
     style={{ display: "block", backgroundColor: "#00000000" }}
     onMouseMove={handleMouseMove}
     onMouseDown={handleClick}

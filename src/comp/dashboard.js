@@ -6,6 +6,7 @@ import { parse2List, parse2String, checkError } from "../core/parser";
 import {manageTabs} from '../core/tabsManager'
 import { modifyOnMouseEvent } from "../core/signalLogic";
 import WaveformTools from "./waveformTools";
+import { getSVG, resetSVG } from "../core/waveFormWindow";
 
 import {
   Box,
@@ -176,7 +177,64 @@ export default function Dashboard() {
       window.removeEventListener("mouseup", onMouseUp);
     };
   }, []);
+  
 
+  //Navbar handlers
+  const handleSaveSVG = () =>
+  {
+    try{
+      const combinedSvg = getSVG();
+
+      const serializer = new XMLSerializer();
+      const svgString = serializer.serializeToString(combinedSvg);
+
+      const blob = new Blob([svgString], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+
+      //SVG part
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "filename.svg";
+      link.click();
+      
+    }catch(err)
+    {
+      alert(err);
+    }
+  }
+
+  const handleSavePng = () => {
+
+    try{
+    const combinedSvg = getSVG();
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(combinedSvg);
+
+    const blob = new Blob([svgString], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    
+    const img = new Image();
+    const canvas = document.createElement("canvas");
+    canvas.width = combinedSvg.getAttribute("width");
+    canvas.height = combinedSvg.getAttribute("height");
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+
+    canvas.toBlob((blob) => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `newFile.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }, "image/png");
+
+    URL.revokeObjectURL(url);
+  }catch(err)
+    {
+      alert(err);
+    }
+  }
 
   return (
     <Container maxWidth={false} disableGutters sx={{ bgcolor: "#1e1e1e", height: "100vh" }}>
@@ -224,7 +282,13 @@ export default function Dashboard() {
             borderBottom: "1px solid #333",
           }}
         >
-          <NavBar title="File" />
+          <NavBar title="File"
+            items={[{label : "New",},
+                    {label : "Save file",},
+                    {label : "Save SVG", onClick : handleSaveSVG},
+                    {label : "Save PNG",}
+            ]}
+          />
           <NavBar title="View" />
           <NavBar title="Help" />
         </Box>

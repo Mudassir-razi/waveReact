@@ -72,6 +72,7 @@ export const TimeRuler = React.memo(
           y={rulerHeight - 10}
           textAnchor="middle"
           fontSize="10"
+          fontFamily="courier"
           fill="#808080"
           style={{ userSelect: "none" }}
         >
@@ -82,11 +83,13 @@ export const TimeRuler = React.memo(
 
     return (
       <svg
+        ref={ref}
         width={svgWidth}      
         height={rulerHeight}
+        viewBox={`0 0 ${svgWidth} ${rulerHeight}`}
         style={{ display: "block", overflow: "hidden" }}
       >
-        <g ref={ref}>
+        <g>
           {ticks}
           {texts}
         </g>

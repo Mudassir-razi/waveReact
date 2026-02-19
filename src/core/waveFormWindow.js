@@ -1,12 +1,14 @@
 import  SignalNameDiv from "../comp/signalNameDiv";
 import  SignalWindow from "./signal";
 import { TimeRuler } from "./grid";
-import Scrollbar from "../comp/scrollBar";
 import { flattenSignals } from "../core/parser";
+import {combineAndSaveSVG} from "./fileSys";
 import { useState, useEffect, useRef } from "react";
 import {getHierarchy, getSignalNames, getMaxLevel, getMaxNameLength, standardizeSignal, getMaxWaveLength} from "./waveFormWindowManager";
 import {Box} from '@mui/material';
 
+var finalSVG;
+export function getSVG(){return finalSVG;}
 
 export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSVG})
 {
@@ -79,6 +81,10 @@ export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSV
     var posNameDiv       = {x : 0, y : rulerHeight};
     var posSignalWindow  = {x : 0, y : 0};
     
+    const totalHeight = (standardSignal.length+1) * (config.dy + config.offsetY);
+    const totalWidth = (maxWaveLength+3) * config.dx;
+    finalSVG = combineAndSaveSVG(scrollRef.current, rulerRef.current, namesRef.current, totalWidth, totalHeight);
+
     return (
         <Box
         sx={{
@@ -139,7 +145,6 @@ export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSV
 
             {/* MAIN SCROLL OWNER */}
             <Box
-            ref={scrollRef}
             sx={{
                 flex: 1,
                 overflow: "auto",

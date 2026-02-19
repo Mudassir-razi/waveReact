@@ -16,11 +16,12 @@ const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, c
 
         return (
             <svg
-                ref={ref}
                 x={pos.x}
                 y={pos.y}
+                ref={ref}
                 width={namePlateWidth}
                 height={namePlateHeight}
+                viewBox={`0 0 ${namePlateWidth} ${namePlateHeight}`}
                 display="block"
             >
                 <rect

@@ -17,9 +17,9 @@ export function modifyOnMouseEvent(signals, timeStamp, signalIdx, timeStampPrev,
     if (timeStampPrev === timeStamp) {
 
         // Single click
-        if(action === 'erase')
+        if(action === 'eraser')
         {
-
+            
         }
         
         else if(timeStamp < currentWave.length){

@@ -1,65 +1,88 @@
 export function combineAndSaveSVG(
   signalSvg,
-  gridSvg,
+  rulerSvg,
   nameSvg,
+  totalWidth,
+  totalHeight,
   filename = "combined.svg"
 ) {
   const SVG_NS = "http://www.w3.org/2000/svg";
 
-  if (!signalSvg || !gridSvg || !nameSvg) return;
+  if (!signalSvg || !rulerSvg || !nameSvg) {
+    console.warn("Missing SVG refs");
+    return;
+  }
 
-  // Extract dimensions
-  const nameWidth = parseFloat(nameSvg.getAttribute("width")) || 0;
-  const signalWidth = parseFloat(signalSvg.getAttribute("width")) || 0;
-  const height = Math.max(
-    parseFloat(signalSvg.getAttribute("height")) || 0,
-    parseFloat(nameSvg.getAttribute("height")) || 0
-  );
+  // Extract dimensions safely
+  const nameWidth =
+    signalNumber(nameSvg.getAttribute("width"));
 
-  const totalWidth = nameWidth + signalWidth;
+  const signalWidth =
+    signalNumber(signalSvg.getAttribute("width"));
 
-  // Create new root SVG
+  const nameHeight =
+    signalNumber(nameSvg.getAttribute("height"));
+
+  const signalHeight =
+    signalNumber(signalSvg.getAttribute("height"));
+  
+  const rulerHeight = 
+    signalNumber(rulerSvg.getAttribute("height"));
+
+  const height = signalHeight + 70;
+
+  // Create combined root
   const combinedSvg = document.createElementNS(SVG_NS, "svg");
   combinedSvg.setAttribute("xmlns", SVG_NS);
   combinedSvg.setAttribute("width", totalWidth);
-  combinedSvg.setAttribute("height", height);
+  combinedSvg.setAttribute("height", totalHeight);
+  combinedSvg.setAttribute("viewBox", `0 0 ${totalWidth} ${totalHeight}`);
 
-  // Optional background
+  // Background
   const bg = document.createElementNS(SVG_NS, "rect");
   bg.setAttribute("width", totalWidth);
   bg.setAttribute("height", height);
-  bg.setAttribute("fill", "#1e1e1e");
+  bg.setAttribute("fill", "#292929");
   combinedSvg.appendChild(bg);
 
-  // Clone name SVG content
-  const nameGroup = document.createElementNS(SVG_NS, "g");
-  nameGroup.setAttribute("transform", `translate(0, 0)`);
-  nameGroup.innerHTML = nameSvg.innerHTML;
-  combinedSvg.appendChild(nameGroup);
+  // Helper to copy children safely
+  function appendSvgContent(sourceSvg, offsetX = 0, offsetY=0) {
+    const group = document.createElementNS(SVG_NS, "g");
+    group.setAttribute("transform", `translate(${offsetX}, ${offsetY})`);
 
-  // Clone grid content
-  const gridGroup = document.createElementNS(SVG_NS, "g");
-  gridGroup.setAttribute("transform", `translate(${nameWidth}, 0)`);
-  gridGroup.innerHTML = gridSvg.innerHTML;
-  combinedSvg.appendChild(gridGroup);
+    Array.from(sourceSvg.childNodes).forEach(node => {
+      group.appendChild(node.cloneNode(true));
+    });
 
-  // Clone signal content
-  const signalGroup = document.createElementNS(SVG_NS, "g");
-  signalGroup.setAttribute("transform", `translate(${nameWidth}, 0)`);
-  signalGroup.innerHTML = signalSvg.innerHTML;
-  combinedSvg.appendChild(signalGroup);
+    combinedSvg.appendChild(group);
+  }
 
-  // Serialize
-  const serializer = new XMLSerializer();
-  const svgString = serializer.serializeToString(combinedSvg);
+  // Append name area
+  appendSvgContent(nameSvg, 0, 0);
 
-  const blob = new Blob([svgString], { type: "image/svg+xml" });
-  const url = URL.createObjectURL(blob);
+  // Append ruler
+  appendSvgContent(rulerSvg, nameWidth, 0);
 
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
+  // Append signal
+  appendSvgContent(signalSvg, nameWidth, rulerHeight);
 
-  URL.revokeObjectURL(url);
+  return combinedSvg;
+  // Serialize & download
+  // const serializer = new XMLSerializer();
+  // const svgString = serializer.serializeToString(combinedSvg);
+
+  // const blob = new Blob([svgString], { type: "image/svg+xml" });
+  // const url = URL.createObjectURL(blob);
+
+  // const link = document.createElement("a");
+  // link.href = url;
+  // link.download = filename;
+  // link.click();
+
+  // URL.revokeObjectURL(url);
+}
+
+function signalNumber(value) {
+  const num = parseFloat(value);
+  return isNaN(num) ? 0 : num;
 }
