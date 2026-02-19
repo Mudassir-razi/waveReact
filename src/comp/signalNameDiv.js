@@ -37,10 +37,10 @@ const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, c
                   if(splitName.length === 1){
                   return (
                     <text
-                      key={i}
-                      x={0}                   
-                      y={0}           
-                      fill={textColor}
+                        key={i}
+                        x={0}                   
+                        y={0}           
+                        fill={textColor}
                         textAnchor="end"
                         fontSize={14}
                         fontFamily="monospace"

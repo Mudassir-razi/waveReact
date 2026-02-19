@@ -26,8 +26,9 @@ export default function NavBar({ title, items = [] }) {
       <Button
         onClick={handleClick}
         aria-haspopup="true"
+        variant='text'
         aria-expanded={open ? "true" : undefined}
-        sx={{ color: "#ccc" }}
+        
       >
         {title}
       </Button>

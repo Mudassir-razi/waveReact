@@ -83,7 +83,11 @@ export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSV
     
     const totalHeight = (standardSignal.length+1) * (config.dy + config.offsetY);
     const totalWidth = (maxWaveLength+3) * config.dx;
-    finalSVG = combineAndSaveSVG(scrollRef.current, rulerRef.current, namesRef.current, totalWidth, totalHeight);
+
+    //after rendering, combine all and store it for saving
+    useEffect(() => {
+        finalSVG = combineAndSaveSVG(scrollRef.current, rulerRef.current, namesRef.current, totalWidth, totalHeight);
+    }, [totalWidth, totalHeight]);
 
     return (
         <Box

@@ -288,7 +288,7 @@ const Signal = React.memo(function Signal({
           stroke="none"
           strokeWidth={0}
           fill={
-            busColors[i] !== "x"
+            busColors[i][0] !== "u"
               ? darkenHexColor(busColors[i], 20)
               : busColors[i]
           }
@@ -333,12 +333,11 @@ const Signal = React.memo(function Signal({
 
 
 
-
 //Pattern generator function for 'X'
 function DiagonalHatchPattern({
-  id = "hatch-diag",
+  id = patternId,
   size = 5,
-  stroke = "#000",
+  stroke = "#ffffff",
   strokeWidth = 1,
   rotation = 45,
 }) {

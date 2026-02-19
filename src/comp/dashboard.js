@@ -6,8 +6,8 @@ import { parse2List, parse2String, checkError } from "../core/parser";
 import {manageTabs} from '../core/tabsManager'
 import { modifyOnMouseEvent } from "../core/signalLogic";
 import WaveformTools from "./waveformTools";
-import { getSVG, resetSVG } from "../core/waveFormWindow";
-
+import { getSVG } from "../core/waveFormWindow";
+import { openJSONFile, saveJSONFile } from "../core/fileSys";
 import {
   Box,
   Container,
@@ -48,10 +48,28 @@ export default function Dashboard() {
     nameStart: 5,
   });
 
-
+  //Tab stuff..............................................................................................................
   //Tabs handler starts 
   const [allTabsData, setAllTabsData] = useState([{name : 'New Tab', waveform : []}]);
   const [selectedTabIndex, setSelectedTabIndex] = useState(0);
+
+  //Tab name editers 
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [tempName, setTempName] = useState("");
+
+  const handleStartEdit = (index, currentName) => {
+    setEditingIndex(index);
+    setTempName(currentName);
+  };
+
+  const handleSaveEdit = (index) => {
+    const updatedTabs = [...allTabsData];
+    updatedTabs[index].name = tempName;
+    setAllTabsData(updatedTabs);
+    setEditingIndex(null);
+  };
+
+  //Changing tab on Click 
   const handleTabChange = (event, newValue) => {
     //first, store the last tab's data
     setAllTabsData(manageTabs(allTabsData, selectedTabIndex, 'mod', currentSignalData));
@@ -180,6 +198,36 @@ export default function Dashboard() {
   
 
   //Navbar handlers
+  const handleNewFile = () =>
+  {
+    setAllTabsData([{name : 'New Tab', waveform : []}]);
+    setSelectedTabIndex(0);
+    editorRef.current.setValue("");
+    setCurrentSignalData([]);
+  }
+  const handleOpenFile = () =>
+  {
+    // const proceed = window.confirm("Opening a file will replace the current data. Do you want to continue?");
+    // if(~proceed){return null;}
+
+    try{
+      openJSONFile().then((data) => {
+        setAllTabsData(data);
+        editorRef.current.setValue(parse2String(data[0].waveform));
+        setCurrentSignalData(data[0].waveform);
+      });
+    }catch(err)
+    {alert(err);}
+  }
+  const handleSaveFile = () =>
+  {
+    try{
+    const allTabsUpdatedData = manageTabs(allTabsData, selectedTabIndex, 'mod', currentSignalData);
+    saveJSONFile(allTabsUpdatedData);
+    }catch(err)
+    {alert(err);}
+  }
+
   const handleSaveSVG = () =>
   {
     try{
@@ -204,32 +252,34 @@ export default function Dashboard() {
   }
 
   const handleSavePng = () => {
-
     try{
     const combinedSvg = getSVG();
     const serializer = new XMLSerializer();
     const svgString = serializer.serializeToString(combinedSvg);
-
-    const blob = new Blob([svgString], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
     
+    const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
     const img = new Image();
-    const canvas = document.createElement("canvas");
-    canvas.width = combinedSvg.getAttribute("width");
-    canvas.height = combinedSvg.getAttribute("height");
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0);
+    img.onload = function(){
+      const canvas = document.createElement("canvas");
+      canvas.width = combinedSvg.getAttribute("width");
+      canvas.height = combinedSvg.getAttribute("height");
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
 
-    canvas.toBlob((blob) => {
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `newFile.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }, "image/png");
+      canvas.toBlob((blob) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `newFile.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }, "image/png");
 
-    URL.revokeObjectURL(url);
+      URL.revokeObjectURL(url);
+    }
+    img.src = url;
   }catch(err)
     {
       alert(err);
@@ -283,10 +333,11 @@ export default function Dashboard() {
           }}
         >
           <NavBar title="File"
-            items={[{label : "New",},
-                    {label : "Save file",},
-                    {label : "Save SVG", onClick : handleSaveSVG},
-                    {label : "Save PNG",}
+            items={[{label : "New", onClick : handleNewFile},
+                    {label : "Open ", onClick : handleOpenFile},
+                    {label : "Save ", onClick : handleSaveFile},
+                    {label : "Save as SVG", onClick : handleSaveSVG},
+                    {label : "Save as PNG", onClick : handleSavePng}
             ]}
           />
           <NavBar title="View" />
@@ -409,17 +460,41 @@ export default function Dashboard() {
           value={selectedTabIndex}
           onChange={handleTabChange}
           variant="scrollable"
-          scrollButtons={true}
-          sx={{ "& .MuiTabs-flexContainer": {
-          alignItems: "center",
-          },}}
+          scrollButtons
         >
-          {
-            allTabsData.map((tab, i) => (
-              <Tab label={tab.name} {...tabProps(i)}/>
-            ))
-          }
+          {allTabsData.map((tab, i) => (
+            <Tab
+              key={i}
+              {...tabProps(i)}
+              label={
+                editingIndex === i ? (
+                  <input
+                    autoFocus
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    onBlur={() => handleSaveEdit(i)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveEdit(i);
+                      if (e.key === "Escape") setEditingIndex(null);
+                    }}
+                    style={{
+                      width: "100px",
+                      fontSize: "inherit",
+                      textAlign: "center"
+                    }}
+                  />
+                ) : (
+                  <span
+                    onDoubleClick={() => handleStartEdit(i, tab.name)}
+                  >
+                    {tab.name}
+                  </span>
+                )
+              }
+            />
+          ))}
         </Tabs>
+
 
         {/* Right button */}
         <Button

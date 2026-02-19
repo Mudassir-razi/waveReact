@@ -1,13 +1,20 @@
 import { flattenSignals } from "./parser";
-import { expandWavePattern } from "./waveFormWindowManager";
+import { expandWavePattern, standardizeSignal } from "./waveFormWindowManager";
 
-export function modifyOnMouseEvent(signals, timeStamp, signalIdx, timeStampPrev, signalIdxPrev, action) {
+export function modifyOnMouseEvent(signals, timeStamp_, signalIdx, timeStampPrev_, signalIdxPrev, action) {
+
+    const flatSignals = standardizeSignal(flattenSignals(signals));
+    const currentSignal = flatSignals[signalIdx];
+
+    const scale = currentSignal.scale || 1;
+    const timeStamp = Math.floor(timeStamp_ / scale);
+    const timeStampPrev = Math.floor(timeStampPrev_ / scale); 
+
     if (signalIdx !== signalIdxPrev) {
         return signals;
     }
 
-    const flatSignals = flattenSignals(signals);
-    const currentSignal = flatSignals[signalIdx];
+    
     const splittedWave = expandWavePattern(currentSignal.wave).split(' '); 
     const currentWave = splittedWave[0];
     const complimentaryWave = splittedWave.length === 2 ? " "+ splittedWave[1] : "";
@@ -15,30 +22,27 @@ export function modifyOnMouseEvent(signals, timeStamp, signalIdx, timeStampPrev,
     let newWave = currentWave;
 
     if (timeStampPrev === timeStamp) {
-
-        // Single click
-        if(action === 'eraser')
-        {
-            
-        }
         
-        else if(timeStamp < currentWave.length){
+        //Click on same bit 
+        if(timeStamp < currentWave.length){
             const currentSymbol = getEffectiveSymbol(currentWave, timeStamp);
-            const newVal = currentSymbol === action ? currentSymbol : action;
+            const newVal = action === 'erase' ? '' :  (currentSymbol === action ? currentSymbol : action);
             newWave = setRange(currentWave, timeStamp, timeStamp, newVal); 
         }
         else{
             //extend the signal
-            const dot = ".";
-            newWave = currentWave + dot.repeat(timeStamp-currentWave.length+1);
+            if(action !== 'erase')
+            {
+                const dot = ".";
+                newWave = currentWave + action + dot.repeat(timeStamp-currentWave.length);
+            }
         }
     } else {
         // Click and drag
-        const val = getEffectiveSymbol(currentWave, timeStampPrev);
+        const val = action === 'erase' ? '' : getEffectiveSymbol(currentWave, timeStampPrev);
         const start = Math.min(timeStampPrev, timeStamp);
         const end = Math.max(timeStampPrev, timeStamp);
         newWave = setRange(currentWave, start, end, val);
-
     }
 
     return updateSignalAtIndex(structuredClone(signals), signalIdx, newWave+complimentaryWave);
@@ -109,7 +113,10 @@ function setRange(wave, start, end, val) {
     if (start > end || start < 0 || end >= expanded.length) return wave;
 
     const arr = expanded.split('');
-    for (let i = start; i <= end; i++) arr[i] = val;
+    for (let i = start; i <= end; i++) 
+    {
+        arr[i] = val;
+    }
     return compressWave(arr.join(''));
 }
 

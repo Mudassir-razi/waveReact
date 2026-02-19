@@ -6,36 +6,37 @@ export const Grid = React.memo(function Grid({
   signalCount
 }) {
 
-  const lines = useMemo(() => {
-    const result = [];
+  const pathD = useMemo(() => {
     const totalHeight =
       (signalCount + 1) * (config.dy + config.offsetY);
 
-    for (let i = 0; i <= maxWaveLength; i++) {
-      const x = i * config.dx;
+    const y1 = 15;
+    const y2 = totalHeight - 15;
 
-      result.push(
-        <line
-          key={i}
-          className="grid-line"
-          x1={x + 0.5}
-          y1={15}
-          x2={x + 0.5}
-          y2={totalHeight - 15}
-          stroke="lightgrey"
-          strokeOpacity={0.4}
-          strokeWidth={1}
-          strokeDasharray="4 4"
-          pointerEvents="none"
-        />
-      );
+    let d = "";
+
+    for (let i = 0; i <= maxWaveLength; i++) {
+      const x = i * config.dx + 0.5;
+
+      d += `M ${x} ${y1} V ${y2} `;
     }
 
-    return result;
+    return d;
   }, [config, maxWaveLength, signalCount]);
 
-  return <>{lines}</>;
+  return (
+    <path
+      d={pathD}
+      stroke="lightgrey"
+      strokeOpacity={0.4}
+      strokeWidth={1}
+      strokeDasharray="4 4"
+      fill="none"
+      pointerEvents="none"
+    />
+  );
 });
+
 
 export const TimeRuler = React.memo(
   React.forwardRef(function TimeRuler(
@@ -110,7 +111,7 @@ export const Cursor = React.memo(function Cursor({ mouseX, height }) {
         y1={0}
         x2={mouseX}
         y2={height}
-        stroke="red"
+        stroke="#555555"
         strokeWidth={1}
       />
       <line
@@ -118,7 +119,7 @@ export const Cursor = React.memo(function Cursor({ mouseX, height }) {
         y1={0}
         x2={mouseX + 15}
         y2={height}
-        stroke="red"
+        stroke="#555555"
         strokeWidth={1}
       />
     </g>

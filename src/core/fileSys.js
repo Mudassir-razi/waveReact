@@ -86,3 +86,61 @@ function signalNumber(value) {
   const num = parseFloat(value);
   return isNaN(num) ? 0 : num;
 }
+
+/**
+ * 
+ * @param {JSON} data -JSON data to save
+ * @param {string} filename -name of the file 
+ */
+export function saveJSONFile(data, filename = "data.json") {
+  const json = JSON.stringify(data, null, 2); // pretty-print with 2-space indent
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+
+  URL.revokeObjectURL(url); // cleanup
+}
+
+
+/**
+ * 
+ * @returns Opens up a json file
+ */
+export function openJSONFile() {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.style.display = "none";
+
+    input.onchange = async (event) => {
+      const file = event.target.files[0];
+      if (!file) {
+        reject(new Error("No file selected"));
+        return;
+      }
+
+      try {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        resolve(json);
+      } catch (err) {
+        reject(new Error("Invalid JSON file"));
+      } finally {
+        document.body.removeChild(input);
+      }
+    };
+
+    input.onerror = () => {
+      reject(new Error("File input error"));
+      document.body.removeChild(input);
+    };
+
+    document.body.appendChild(input);
+    input.click();
+  });
+}
