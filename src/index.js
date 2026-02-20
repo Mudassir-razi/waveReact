@@ -75,7 +75,6 @@ root.render(
       <CssBaseline />
       <Dashboard />
     </ThemeProvider>
-
   </React.StrictMode>
 );
 

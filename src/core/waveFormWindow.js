@@ -12,6 +12,7 @@ export function getSVG(){return finalSVG;}
 
 export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSVG})
 {
+    console.log("Waveform window");
     //To calculate viewport size
     const containerRef = useRef(null);
     const[viewport, setViewport] = useState({});
@@ -38,18 +39,8 @@ export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSV
     }, []);
 //...............................................................................
 
-    //take data
-    const [flatSignalData, setFlatSignalData] = useState([]);
-
     const signalCopyData = structuredClone(signals);
 
-    //Change flat signals
-    useEffect(() => {
-        //console.log(signals);    
-        const flatSignals = flattenSignals(signals);
-        //console.log(flatSignals);
-        setFlatSignalData(flatSignals);
-    }, [signals]);
 
     //For calculating windowsize 
     useEffect(() => {
@@ -67,6 +58,7 @@ export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSV
 
 
     //calculate stuff
+    const flatSignalData = flattenSignals(signals);
     const standardSignal = standardizeSignal(flatSignalData);
     const hierarchy = getHierarchy(signalCopyData);
     const signalNames = getSignalNames();

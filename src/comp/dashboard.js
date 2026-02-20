@@ -34,6 +34,7 @@ function tabProps(index) {
 
 export default function Dashboard() {
   //Canvas configuration
+  console.log("dashboar");
   const [canvasConfig, setCanvasConfig] = useState({
     dx: 30,
     dy: 22,

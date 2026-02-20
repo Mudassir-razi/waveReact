@@ -1,11 +1,12 @@
 import React, { useMemo } from "react";
 
-export const Grid = React.memo(function Grid({
+export function Grid({
   config,
   maxWaveLength,
   signalCount
 }) {
 
+  console.log("Making grid");
   const pathD = useMemo(() => {
     const totalHeight =
       (signalCount + 1) * (config.dy + config.offsetY);
@@ -35,11 +36,10 @@ export const Grid = React.memo(function Grid({
       pointerEvents="none"
     />
   );
-});
+}
 
 
-export const TimeRuler = React.memo(
-  React.forwardRef(function TimeRuler(
+export const TimeRuler = React.forwardRef(function TimeRuler(
     { config, maxWaveLength },
     ref
   ) {
@@ -96,8 +96,7 @@ export const TimeRuler = React.memo(
         </g>
       </svg>
     );
-  })
-);
+  });
 
 
 
