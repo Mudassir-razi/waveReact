@@ -10,9 +10,9 @@ import {Box} from '@mui/material';
 var finalSVG;
 export function getSVG(){return finalSVG;}
 
-export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSVG})
+export default function WaveFormWindow({signals, anno, mousePrevX, mode, state, config, mouseDownSVG, mouseUpSVG})
 {
-    console.log("Waveform window");
+    //console.log("Waveform window");
     //To calculate viewport size
     const containerRef = useRef(null);
     const[viewport, setViewport] = useState({});
@@ -151,6 +151,7 @@ export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSV
                 ref={scrollRef}
                 pos={posSignalWindow}
                 signals={standardSignal}
+                anno={anno}
                 maxWaveLength={maxWaveLength}
                 config={config}
 
@@ -160,6 +161,10 @@ export default function WaveFormWindow({signals, config, mouseDownSVG, mouseUpSV
                 viewMode={false}
                 mouseDownSVG={mouseDownSVG}
                 mouseUpSVG={mouseUpSVG}
+
+                mode={mode}
+                state={state}
+                mousePrevX={mousePrevX}
             />
             </Box>
         </Box>

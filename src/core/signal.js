@@ -3,6 +3,7 @@ import { getTextSegment, initTextRenderer, getTextSegmentForce } from "./segment
 import { forwardRef, useEffect, useRef, useState } from "react";
 import React, { useMemo } from "react";
 import {Grid, Cursor} from "./grid";
+import TimingAnnotations from "./annotation";
 
 const div = 4;
 //coordinate lookup table
@@ -29,10 +30,12 @@ export function getBuses()
 }
 
 //returns the main layer of the canvas, with all the signals rendered onto it
-const SignalWindow = forwardRef(({pos, signals, config, maxWaveLength, height, width, viewMode, mouseDownSVG, mouseUpSVG}, ref) => 
+const SignalWindow = forwardRef(({pos, signals, anno, config, maxWaveLength, height, width, viewMode, mouseDownSVG, mouseUpSVG, mousePrevX, mode, state}, ref) => 
 {
   const [mouseX, setMouseX] = useState(null);
-  console.log("singlan window");
+  const [mouseY, setMouseY] = useState(null);
+
+  //console.log("singlan window");
   // Track mouse movement inside SVG
   const handleMouseMove = (event) => {
     const svg = event.currentTarget;
@@ -41,6 +44,7 @@ const SignalWindow = forwardRef(({pos, signals, config, maxWaveLength, height, w
     pt.y = event.clientY;
     const cursorPoint = pt.matrixTransform(svg.getScreenCTM().inverse());
     setMouseX(cursorPoint.x); // update cursor x
+    setMouseY(cursorPoint.y);
   };
 
   // Handle clicks (example: log or select)
@@ -86,11 +90,25 @@ const SignalWindow = forwardRef(({pos, signals, config, maxWaveLength, height, w
       maxWaveLength={maxWaveLength}
       signalCount={signals.length}
     />
-    <Cursor mouseX={mouseX} height={height} />
+    <Cursor 
+      mouseX={mouseX}
+      mouseY={mouseY} 
+      height={height} 
+      mode={mode}
+      state={state}
+      mousePrevX={mousePrevX} 
+    />
     <AllSignals
       signals={signals}
       config={config}
       viewMode={viewMode}
+    />
+    <TimingAnnotations
+      annotations={anno}
+      config={config}
+      mode={mode === "annotation"}
+      state={state}
+      mousePrevX={mousePrevX}
     />
     </svg>
 
@@ -160,7 +178,7 @@ function Signal({
     busColors,
     texts
   } = useMemo(() => {
-    console.log("Using memo");
+    //console.log("Using memo");
     const parsedInt = parseFloat(Rawscale);
     const scale = isNaN(parsedInt) ? 1 : parsedInt;
     const waveY = idx * (dy + 10) + 15;
@@ -176,88 +194,105 @@ function Signal({
 
     initRender(UnscaledDx, dy, div, waveY, scale, lineWidth % 2 !== 0);
     initTextRenderer(UnscaledDx, dy, waveY, scale, data);
-    console.log(wave.length, texts.length, texts);
+    //console.log(wave.length, texts.length, texts);
     for (let i = 0; i < wave.length; i++) {
-      current = wave[i];
-      //console.log(i, current);
-      //deal with complementary signal
-      // if(current === ' ' && wave[i+1] === '~' && complement === false){complement = true; i = -1; continue;}
-      // if(complement) current = getComplement(current);
-      
-      const dxScaled = UnscaledDx * scale;
+      try{
+        current = wave[i];
+        //console.log(i, current);
+        //deal with complementary signal
+        if(current === ' ' && wave[i+1] === '~' && complement === false)
+        {
+          //we are at the end of true signal. not tie up the loose ends. 
+          complement = true; i = -1;
+          const lastSegment = getShapeSegmentForce();
+          const lastTextSegment = getTextSegmentForce();
 
-      const lastValidState =
-        Object.keys(busColorScheme).includes(lastValid)
-          ? "B"
-          : lastValid.toUpperCase();
+          if (lastSegment) {
+            busShapes.push(lastSegment);
+            busColors.push(busColorScheme[lastValid]);
+          }
 
-      const currentValidState =
-        Object.keys(busColorScheme).includes(current)
-          ? "B"
-          : current.toUpperCase();
-
-      //We do the normal thing if we are True signal
-        points[0] += getLineSegment(
-          currentValidState,
-          lastValidState,
-          i * dxScaled + phase
-        );
-
-        const shape = getShapeSegment(
-          currentValidState,
-          lastValidState,
-          i * dxScaled + phase
-        );
-
-        const textSegment = getTextSegment(
-          currentValidState,
-          lastValidState,
-          i * dxScaled + phase
-        );
-
-        if (shape) {
-          busColors.push(busColorScheme[lastValid]);
-          busShapes.push(shape);
+          if (lastTextSegment) {
+            //console.log( typeof(lastTextSegment));
+            if (Array.isArray(lastTextSegment)) {
+              texts.push(...lastTextSegment);
+            } else {
+              texts.push(lastTextSegment);
+            }
+          } 
+          continue;
         }
 
-        if (textSegment) {
-          console.log(textSegment, i);
-          if (Array.isArray(textSegment)) {
-            texts.push(...textSegment);
-          } else {
-            texts.push(textSegment);
+        if(complement) current = getComplement(current);
+        
+        const dxScaled = UnscaledDx * scale;
+
+        const lastValidState =
+          Object.keys(busColorScheme).includes(lastValid)
+            ? "B"
+            : lastValid.toUpperCase();
+
+        const currentValidState =
+          Object.keys(busColorScheme).includes(current)
+            ? "B"
+            : current.toUpperCase();
+
+        const currentValidStateForText = current === "x" ? "X" : currentValidState;
+
+        //We do the normal thing if we are True signal
+        if(complement === false){
+          points[0] += getLineSegment(
+            currentValidState,
+            lastValidState,
+            i * dxScaled + phase
+          );
+
+          const shape = getShapeSegment(
+            currentValidState,
+            lastValidState,
+            i * dxScaled + phase
+          );
+
+          const textSegment = getTextSegment(
+            currentValidStateForText,
+            lastValidState,
+            i * dxScaled + phase
+          );
+
+          if (shape) {
+            busColors.push(busColorScheme[lastValid]);
+            busShapes.push(shape);
+          }
+
+          if (textSegment) {
+            //console.log(textSegment, i);
+            if (Array.isArray(textSegment)) {
+              texts.push(...textSegment);
+            } else {
+              texts.push(textSegment);
+            }
           }
         }
+        
+        //We're doing complementary signal, only lines. 
+        else{
+          points[1] += getLineSegment(
+            currentValidState,
+            lastValidState,
+            i * dxScaled + phase
+          );
+        }
 
-        lastValid = current === "." ? lastValid : current;
-      }
-
-      const lastSegment = getShapeSegmentForce();
-      const lastTextSegment = getTextSegmentForce();
-
-      if (lastSegment) {
-        busShapes.push(lastSegment);
-        busColors.push(busColorScheme[lastValid]);
-      }
-
-      if (lastTextSegment) {
-        console.log( typeof(lastTextSegment));
-        if (Array.isArray(lastTextSegment)) {
-          texts.push(...lastTextSegment);
-        } else {
-          texts.push(lastTextSegment);
+          lastValid = current === "." ? lastValid : current;
+        }catch(err)
+        {
+          lastValid = current === "." ? lastValid : current;
+          continue;
         }
       }
         
       
-      // else{
-      //   points[1] += getLineSegment(
-      //     currentValidState,
-      //     lastValidState,
-      //     i * dxScaled + phase
-      //   );
-      //   lastValid = current === "." ? lastValid : current;
-      // }
+      // 
     
     console.log("Rendering all signal");
     console.log(texts);
@@ -283,11 +318,7 @@ function Signal({
           d={shape}
           stroke="none"
           strokeWidth={0}
-          fill={
-            busColors[i][0] !== "u"
-              ? darkenHexColor(busColors[i], 20)
-              : busColors[i]
-          }
+          fill={darkenHexColor(busColors[i], 20)}
           fillOpacity="1"
         />
       ))}
@@ -319,6 +350,8 @@ function Signal({
         pointerEvents="none"
         className="dynamic-text"
       >
+        {/* Here */}
+        {texts}
       </text>
     </>
   );
@@ -374,8 +407,9 @@ function getComplement(bit)
 }
 
 function darkenHexColor(hex, percent) {
-    // Remove '#' if present
+
     try{
+      if(hex.startsWith("url(")) return hex; //pattern fill, do not darken
       hex = hex.replace(/^#/, '');
 
       // Convert hex to RGB
@@ -397,6 +431,6 @@ function darkenHexColor(hex, percent) {
       //50 for opacity
       return `#${newHex}50`;
     }catch{
-      return "white";
+      return hex;
     }
 }

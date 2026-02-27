@@ -1,3 +1,4 @@
+import React from 'react';
 
 let dx = 0;
 let dy = 0;
@@ -25,8 +26,8 @@ export function initTextRenderer(dx_, dy_, offsetY_, scale_, data_)
     offsetY = offsetY_;
     index = 0;
     scale = scale_;
-    data = data_.split(' ');
-    //console.log(data);
+    data = data_.split(',');
+    console.log(data);
 }
 
 /**
@@ -38,6 +39,7 @@ export function initTextRenderer(dx_, dy_, offsetY_, scale_, data_)
  */
 export function getTextSegment(currentState, prevState, offsetX_)
 {
+    //if(data[0] === "")return null; //no data to show
     //we have a bus to work with
     if (currentState === "B" || prevState === "B")
     {
@@ -94,45 +96,56 @@ export function getTextSegment(currentState, prevState, offsetX_)
  */
 export function getTextSegmentForce(){if(busLength !== 0)return getText();}
 
+
 /**
  * Creates a Tspan object, puts string in it, returns the value
  * @returns Tspan object with text segment
  */
-function getText()
-{   
-    if(index >= data.length)return null;
+function getText() {
+    if (index >= data.length) return null;
+
     const fontSize = 12;
+    const lineHeight = 12;
     const textContent = data[index];
-    const textLen = textContent.length;
-    if(textLen < (4 * busLength * scale)){
-        const t1 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-        //console.log(textLen);
-        //t1.setAttribute("x", textOffset + scale* dx*0.28 + busLength*14);
-        t1.setAttribute("x", 5 + textOffset + (busLength * dx * scale)/2);
-        t1.setAttribute("y", offsetY+15);
-        t1.setAttribute("font-size", fontSize);
-        t1.textContent =  textContent;
-        return t1;
+
+    const centerX =
+        5 + textOffset + (busLength * dx * scale) / 2;
+
+    const lines = textContent.split("\n");
+
+    // ORIGINAL single-line position
+    const baseY = offsetY + 15;
+
+    // If only one line → keep original behavior
+    if (lines.length === 1) {
+        return (
+            <tspan
+                key={`t-${index}`}
+                x={centerX}
+                y={baseY}
+                fontSize={fontSize}
+            >
+                {lines[0]}
+            </tspan>
+        );
     }
 
-    //If the text it too long, make two portions. 
-    else {
-        const part1 = data[index].substring(0, 4 * busLength - 1);
-        const part2 = data[index].substring(4 * busLength -1);
+    // Multiline → center vertically around original baseY
+    const totalHeight = (lines.length - 1) * lineHeight;
+    const startY = baseY - totalHeight / 2;
 
-        const t1 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-        const t2 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-
-        t1.textContent = part1;
-        t2.textContent = part2;
-
-        t1.setAttribute("x", 5 + textOffset + (busLength * dx * scale)/2);
-        t1.setAttribute("y", offsetY+10);
-        t1.setAttribute("font-size", fontSize);
-
-        t2.setAttribute("x", 5 + textOffset + (busLength * dx * scale)/2);
-        t2.setAttribute("y", offsetY+20);
-        t2.setAttribute("font-size", fontSize);
-        return [t1, t2];
-    }
+    return (
+        <React.Fragment key={`t-${index}`}>
+            {lines.map((line, i) => (
+                <tspan
+                    key={i}
+                    x={centerX}
+                    y={startY + i * lineHeight}
+                    fontSize={fontSize}
+                >
+                    {line}
+                </tspan>
+            ))}
+        </React.Fragment>
+    );
 }

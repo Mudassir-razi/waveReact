@@ -6,7 +6,7 @@ export function Grid({
   signalCount
 }) {
 
-  console.log("Making grid");
+  //console.log("Making grid");
   const pathD = useMemo(() => {
     const totalHeight =
       (signalCount + 1) * (config.dy + config.offsetY);
@@ -100,11 +100,21 @@ export const TimeRuler = React.forwardRef(function TimeRuler(
 
 
 
-export const Cursor = React.memo(function Cursor({ mouseX, height }) {
+export const Cursor = React.memo(function Cursor({mouseX, mouseY, start, end, foot, height, mode, state }) {
   if (mouseX == null) return null;
 
-  return (
-    <g pointerEvents="none">
+  if(mode === "annotation")return (
+    <TempAnno 
+      mouseX={mouseX} 
+      mouseY={mouseY} 
+      start={start} 
+      end={end} 
+      foot={foot} 
+      height={height} 
+      state={state}
+    />
+  );
+  else if (mode === "signal")return (
       <line
         x1={mouseX}
         y1={0}
@@ -113,14 +123,79 @@ export const Cursor = React.memo(function Cursor({ mouseX, height }) {
         stroke="#555555"
         strokeWidth={1}
       />
-      <line
-        x1={mouseX + 15}
-        y1={0}
-        x2={mouseX + 15}
-        y2={height}
-        stroke="#555555"
-        strokeWidth={1}
-      />
-    </g>
   );
 });
+
+
+const TempAnno = ({mouseX, mouseY, start, end, foot, height, state}) => 
+{
+    if(state === 0)
+    {
+      return(
+        <g>
+          <line
+            x1={mouseX}
+            y1={0}
+            x2={mouseX}
+            y2={height}
+            stroke="#555555"
+            strokeWidth={1}
+          />
+        </g>
+      );
+    }
+    else if(state === 1)
+    {
+      return(
+        <g>
+          <line
+            x1={start}
+            y1={foot}
+            x2={start}
+            y2={mouseY}
+            stroke="#555555"
+            strokeWidth={1}
+          />
+          <line
+            x1={mouseX}
+            y1={foot}
+            x2={mouseX}
+            y2={mouseY}
+            stroke="#555555"
+            strokeWidth={1}
+          />
+        </g>
+      );
+    }
+    else if(state === 2)
+    {
+      return(
+      <g>
+          <line
+            x1={start}
+            y1={0}
+            x2={start}
+            y2={foot}
+            stroke="#555555"
+            strokeWidth={1}
+          />
+          <line
+            x1={end}
+            y1={mouseY}
+            x2={end}
+            y2={foot}
+            stroke="#555555"
+            strokeWidth={1}
+          />
+          <line
+            x1={end}
+            y1={mouseY}
+            x2={start}
+            y2={mouseY}
+            stroke="#555555"
+            strokeWidth={1}
+          />
+        </g>);
+    }
+   else return null;
+}

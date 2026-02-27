@@ -48,7 +48,7 @@ const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, c
                     >
                         {name}
                     </text>
-                )}
+                    )}
                     else{
                         return (
                             <>
@@ -65,7 +65,7 @@ const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, c
                                 {splitName[0]}
                             </text>
                             <text
-                            key={i}
+                            key={i+2555}
                             x={0}                   
                             y={0}           
                             fill={textColor}

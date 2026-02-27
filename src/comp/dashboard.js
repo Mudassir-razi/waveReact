@@ -31,10 +31,11 @@ function tabProps(index) {
   };
 }
 
+let dontChangeEditor = false;
 
 export default function Dashboard() {
   //Canvas configuration
-  console.log("dashboar");
+
   const [canvasConfig, setCanvasConfig] = useState({
     dx: 30,
     dy: 22,
@@ -51,7 +52,7 @@ export default function Dashboard() {
 
   //Tab stuff..............................................................................................................
   //Tabs handler starts 
-  const [allTabsData, setAllTabsData] = useState([{name : 'New Tab', waveform : []}]);
+  const [allTabsData, setAllTabsData] = useState([{name : 'New Tab', waveform : [], annotations : []}]);
   const [selectedTabIndex, setSelectedTabIndex] = useState(0);
 
   //Tab name editers 
@@ -73,11 +74,12 @@ export default function Dashboard() {
   //Changing tab on Click 
   const handleTabChange = (event, newValue) => {
     //first, store the last tab's data
-    setAllTabsData(manageTabs(allTabsData, selectedTabIndex, 'mod', currentSignalData));
+    setAllTabsData(manageTabs(allTabsData, selectedTabIndex, 'mod', currentSignalData, currentAnnotationData));
     setSelectedTabIndex(newValue);
     //console.log(newValue);
     editorRef.current.setValue(parse2String(allTabsData[newValue].waveform));
     setCurrentSignalData(allTabsData[newValue].waveform);
+    setCurrentAnnotationData(allTabsData[newValue].annotations);
   }
 
   //Tab Buttons handlers
@@ -103,7 +105,16 @@ export default function Dashboard() {
 
   //Mouse movement control for SVG
   const [mouseDown, setMouseDown] = useState(false);
+  const [annoState, setAnnoState] = useState(0);
   const [lastMousePos, setLastMousePos] = useState({x: 0, y: 0});
+
+  //annotation mouse position
+  const [annoStart, setAnnoStart] = useState(0);
+  const [annoEnd, setAnnoEnd] = useState(0);
+  const [annoHead, setAnnoHead] = useState(0);
+  const [annoFoot, setAnnoFoot] = useState(0);
+
+
 
   const mouseDownSVG  = (e) => {
     setMouseDown(true);
@@ -116,9 +127,32 @@ export default function Dashboard() {
     try{
       const clickNow = transform(e);
       const clickLast = transform(lastMousePos);
-      const updatedSignal = modifyOnMouseEvent(currentSignalData, clickNow.x, clickNow.y, clickLast.x, clickLast.y, waveFormButtonSelection);
-      console.log(updatedSignal);
-      editorRef.current.setValue(parse2String(updatedSignal));
+      if(dashboardMode === "signal"){
+        const updatedSignal = modifyOnMouseEvent(currentSignalData, clickNow.x, clickNow.y, clickLast.x, clickLast.y, waveFormButtonSelection);
+        console.log(updatedSignal);
+        editorRef.current.setValue(parse2String(updatedSignal));
+      }
+      else if(dashboardMode === "annotation"){
+        //Annotation modification logic will be here
+        if(annoState === 0){
+          setAnnoStart(clickNow.x);
+          setAnnoFoot(clickNow.y);
+          setAnnoState(1);
+        }
+        else if(annoState === 1){
+          setAnnoEnd(clickNow.x);
+          setAnnoState(2);
+          //console.log("New annotation: ", {text : "new annotation", start : annoStart, end : clickNow.x, head : annoHead, foot : clickNow.y});
+        }
+        else if(annoState === 2){
+          setAnnoHead(clickNow.y);
+          setAnnoState(0);
+          const newAnnotation = {text : "new annotation", start : annoStart, end : annoEnd, head : annoHead, foot : clickNow.y};
+          const updatedAnnotation = [...currentAnnotationData, newAnnotation];
+          editorRef.current.setValue(parse2String(updatedAnnotation));
+          //console.log("New annotation: ", newAnnotation);
+        }
+      }
       //console.log(waveFormButtonSelection);
     }catch(err)
     {
@@ -128,6 +162,8 @@ export default function Dashboard() {
   //......................................................................................................................................
   
   const [currentSignalData, setCurrentSignalData] = useState([]);
+  const [currentAnnotationData, setCurrentAnnotationData] = useState([]);
+  const [dashboardMode, setDashboardMode] = useState("signal"); //signal or annotation
 
   const [editorHeight, setEditorHeight] = useState(240);
   const isResizing = useRef(false);
@@ -138,9 +174,16 @@ export default function Dashboard() {
   const editorRef = useRef(null);
   const handleEditorChange = (value) => {
     try{
-      const signalList = parse2List(value);
-      checkError(signalList);
-      setCurrentSignalData(signalList);
+      if(dontChangeEditor){dontChangeEditor=false; return null;}
+      if(dashboardMode === "signal"){
+        const signalList = parse2List(value);
+        checkError(signalList);
+        setCurrentSignalData(signalList);
+      }
+      else if(dashboardMode === "annotation"){
+        const annotationList = parse2List(value);
+        setCurrentAnnotationData(annotationList);
+      }
     }catch(err)
     {
       console.log("Code error: ", err);
@@ -150,7 +193,7 @@ export default function Dashboard() {
   //Editor buttons
   const handleFormat = () => {
     try{
-      if (editorRef.current) {
+      if (editorRef.current && dashboardMode === "signal") {
         const formatted = parse2String(currentSignalData);
         editorRef.current.setValue(formatted);
       }
@@ -163,7 +206,7 @@ export default function Dashboard() {
    //Editor adding new signal shortcut buttons
   const handleAddSignal = () => {
     try{
-      if (editorRef.current) {
+      if (editorRef.current && dashboardMode === "signal") {
         const updateSignal = [...currentSignalData, {name : 'clock', wave : 'p(.,10)'}];
         editorRef.current.setValue(parse2String(updateSignal));
       }
@@ -287,6 +330,9 @@ export default function Dashboard() {
     }
   }
 
+  const handleMode2Signal = () => {dontChangeEditor=true;setDashboardMode("signal"); editorRef.current.setValue(parse2String(currentSignalData));}
+  const handleMode2Annotation = () => {dontChangeEditor=true;setDashboardMode("annotation");setAnnoState(0);editorRef.current.setValue(parse2String(currentAnnotationData));}
+
   return (
     <Container maxWidth={false} disableGutters sx={{ bgcolor: "#1e1e1e", height: "100vh" }}>
       <Stack spacing={0} sx={{height:"100%"}}>
@@ -341,7 +387,11 @@ export default function Dashboard() {
                     {label : "Save as PNG", onClick : handleSavePng}
             ]}
           />
-          <NavBar title="View" />
+          <NavBar title="Mode"
+          items={[{label : "Signal", onClick : handleMode2Signal},
+                  {label : "Annotation", onClick : handleMode2Annotation},
+            ]} 
+          />
           <NavBar title="Help" />
         </Box>
 
@@ -402,6 +452,13 @@ export default function Dashboard() {
           >
             <WaveFormWindow
               signals={currentSignalData}
+              anno={currentAnnotationData}
+              mode={dashboardMode}
+              state={annoState}
+              start={annoStart}
+              end={annoEnd}
+              foot={annoFoot}
+
               config={canvasConfig}
               mouseDownSVG={mouseDownSVG}
               mouseUpSVG={mouseUpSVG}

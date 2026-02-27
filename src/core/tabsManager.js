@@ -1,4 +1,4 @@
-export function manageTabs(allTabsData, selectedTabIndex, command, newCurrentTabData=[])
+export function manageTabs(allTabsData, selectedTabIndex, command, newCurrentTabData=[], newCurrentAnnotationData=[])
 {
     var newAllTabsData = structuredClone(allTabsData);
 
@@ -7,7 +7,7 @@ export function manageTabs(allTabsData, selectedTabIndex, command, newCurrentTab
         case 'add':{
             //do stuff
             const NameSuffix = String(allTabsData.length);
-            const newTab = {name : "New tab " + NameSuffix, waveform : []};
+            const newTab = {name : "New tab " + NameSuffix, waveform : [], annotation : []};
             newAllTabsData.push(newTab);
             break;
         }
@@ -23,6 +23,7 @@ export function manageTabs(allTabsData, selectedTabIndex, command, newCurrentTab
         case 'mod':
         {
             newAllTabsData[selectedTabIndex].waveform = newCurrentTabData;
+            newAllTabsData[selectedTabIndex].annotation = newCurrentAnnotationData;
             break;
         }
         default : 
