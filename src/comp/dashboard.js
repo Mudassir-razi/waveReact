@@ -8,6 +8,8 @@ import { modifyOnMouseEvent } from "../core/signalLogic";
 import WaveformTools from "./waveformTools";
 import { getSVG } from "../core/waveFormWindow";
 import { openJSONFile, saveJSONFile } from "../core/fileSys";
+import { useAppConfig } from "../core/config";
+
 import {
   Box,
   Container,
@@ -34,25 +36,12 @@ function tabProps(index) {
 let dontChangeEditor = false;
 
 export default function Dashboard() {
-  //Canvas configuration
 
-  const [canvasConfig, setCanvasConfig] = useState({
-    dx: 30,
-    dy: 22,
-    timeStamp: 40,
-    signalCount: 5,
-    offsetY: 10,
-    offsetX: 20,
-
-    //Name div parameter
-    indentPerLevel: 30,
-    charWidth: 6.5,
-    nameStart: 5,
-  });
+  const config = useAppConfig().config;
 
   //Tab stuff..............................................................................................................
   //Tabs handler starts 
-  const [allTabsData, setAllTabsData] = useState([{name : 'New Tab', waveform : [], annotations : []}]);
+  const [allTabsData, setAllTabsData] = useState([{name : 'New Tab', waveform : [], annotation : []}]);
   const [selectedTabIndex, setSelectedTabIndex] = useState(0);
 
   //Tab name editers 
@@ -79,7 +68,7 @@ export default function Dashboard() {
     //console.log(newValue);
     editorRef.current.setValue(parse2String(allTabsData[newValue].waveform));
     setCurrentSignalData(allTabsData[newValue].waveform);
-    setCurrentAnnotationData(allTabsData[newValue].annotations);
+    setCurrentAnnotationData(allTabsData[newValue].annotation);
   }
 
   //Tab Buttons handlers
@@ -111,7 +100,6 @@ export default function Dashboard() {
   //annotation mouse position
   const [annoStart, setAnnoStart] = useState(0);
   const [annoEnd, setAnnoEnd] = useState(0);
-  const [annoHead, setAnnoHead] = useState(0);
   const [annoFoot, setAnnoFoot] = useState(0);
 
 
@@ -123,7 +111,7 @@ export default function Dashboard() {
 
   const mouseUpSVG = (e) => {
 
-    function transform(c){return {x : Math.floor(c.x/(canvasConfig.dx)), y : Math.floor(c.y/(canvasConfig.dy + canvasConfig.offsetY))};}
+    function transform(c){return {x : Math.floor(c.x/(config.dx)), y : Math.floor(c.y/(config.dy + config.offsetY))};}
     try{
       const clickNow = transform(e);
       const clickLast = transform(lastMousePos);
@@ -136,7 +124,7 @@ export default function Dashboard() {
         //Annotation modification logic will be here
         if(annoState === 0){
           setAnnoStart(clickNow.x);
-          setAnnoFoot(clickNow.y);
+          setAnnoFoot(e.y);
           setAnnoState(1);
         }
         else if(annoState === 1){
@@ -145,9 +133,8 @@ export default function Dashboard() {
           //console.log("New annotation: ", {text : "new annotation", start : annoStart, end : clickNow.x, head : annoHead, foot : clickNow.y});
         }
         else if(annoState === 2){
-          setAnnoHead(clickNow.y);
           setAnnoState(0);
-          const newAnnotation = {text : "new annotation", start : annoStart, end : annoEnd, head : annoHead, foot : clickNow.y};
+          const newAnnotation = {text : "new annotation", start : annoStart, end : annoEnd, head : e.y, foot : annoFoot};
           const updatedAnnotation = [...currentAnnotationData, newAnnotation];
           editorRef.current.setValue(parse2String(updatedAnnotation));
           //console.log("New annotation: ", newAnnotation);
@@ -455,11 +442,11 @@ export default function Dashboard() {
               anno={currentAnnotationData}
               mode={dashboardMode}
               state={annoState}
+              
               start={annoStart}
               end={annoEnd}
               foot={annoFoot}
 
-              config={canvasConfig}
               mouseDownSVG={mouseDownSVG}
               mouseUpSVG={mouseUpSVG}
             />

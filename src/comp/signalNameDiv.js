@@ -3,17 +3,18 @@
 //const indentPerLevel = 20; // Indentation per nesting level
 //const charWidth = 6; // Width of the bracket
 import { forwardRef } from "react";
+import { useAppConfig } from "../core/config";
 
 
 
-const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, config, viewMode}, ref) =>
+const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, viewMode}, ref) =>
 {
     const namePlateWidth = width;
     const namePlateHeight= height;
     const nameOffset = width - 20;//maxLevel * config.indentPerLevel + config.nameStart;
     const textColor = viewMode ? "black" : "white";
     const bgColor   = viewMode ? "white" : "transparent";
-
+    const config = useAppConfig().config;
         return (
             <svg
                 x={pos.x}
@@ -82,7 +83,7 @@ const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, c
                 })}
                 {hierarchy.map((b, i) => (
 
-                    <RightBracket bracket={b} config={config} color={textColor} posy={pos.y}></RightBracket>
+                    <RightBracket bracket={b} color={textColor} posy={pos.y}></RightBracket>
                 ))}
             </svg>
         );
@@ -90,8 +91,8 @@ const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, c
 
 export default SignalNameDiv;
 
-function RightBracket({ bracket, config, color, posy }) {
-  
+function RightBracket({ bracket, color, posy }) {
+    const config = useAppConfig().config;
     if(!Object.keys(bracket).includes('text'))return null;
     const groupText = typeof bracket.text === 'string' ? bracket.text : " ";
 

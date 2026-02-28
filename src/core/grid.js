@@ -1,12 +1,16 @@
 import React, { useMemo } from "react";
+import { useAppConfig } from "../core/config";
+
+
+const cursorColor = "#d4d4d4";
 
 export function Grid({
-  config,
   maxWaveLength,
   signalCount
 }) {
 
   //console.log("Making grid");
+  const config = useAppConfig().config;
   const pathD = useMemo(() => {
     const totalHeight =
       (signalCount + 1) * (config.dy + config.offsetY);
@@ -40,10 +44,10 @@ export function Grid({
 
 
 export const TimeRuler = React.forwardRef(function TimeRuler(
-    { config, maxWaveLength },
+    { maxWaveLength },
     ref
   ) {
-
+    const config = useAppConfig().config;
     const rulerHeight = config.rulerHeight ?? 20;
     const svgWidth = maxWaveLength * config.dx + 1;
 
@@ -100,68 +104,49 @@ export const TimeRuler = React.forwardRef(function TimeRuler(
 
 
 
-export const Cursor = React.memo(function Cursor({mouseX, mouseY, start, end, foot, height, mode, state }) {
+export const Cursor = React.memo(function Cursor({mouseX, mouseY, start, end, foot, height, mode, state}) {
+  const config = useAppConfig().config;
   if (mouseX == null) return null;
-
   if(mode === "annotation")return (
     <TempAnno 
       mouseX={mouseX} 
       mouseY={mouseY} 
-      start={start} 
-      end={end} 
+      start={start * config.dx} 
+      end={end* config.dx} 
       foot={foot} 
       height={height} 
       state={state}
     />
   );
   else if (mode === "signal")return (
-      <line
-        x1={mouseX}
-        y1={0}
-        x2={mouseX}
-        y2={height}
-        stroke="#555555"
-        strokeWidth={1}
-      />
+      <Pointer mouseX={mouseX} height={height}/>
   );
 });
 
 
 const TempAnno = ({mouseX, mouseY, start, end, foot, height, state}) => 
 {
-    if(state === 0)
-    {
-      return(
-        <g>
-          <line
-            x1={mouseX}
-            y1={0}
-            x2={mouseX}
-            y2={height}
-            stroke="#555555"
-            strokeWidth={1}
-          />
-        </g>
-      );
-    }
+    console.log(start, foot);
+    if(state === 0)return <Pointer mouseX={mouseX} height={height}/>;
     else if(state === 1)
     {
       return(
         <g>
+          <Pointer mouseX={mouseX} height={height}/>
           <line
             x1={start}
             y1={foot}
             x2={start}
             y2={mouseY}
-            stroke="#555555"
+            stroke="#c4c4c4"
             strokeWidth={1}
           />
           <line
-            x1={mouseX}
-            y1={foot}
+            x1={start}
+            y1={mouseY}
             x2={mouseX}
             y2={mouseY}
-            stroke="#555555"
+            stroke={cursorColor}
             strokeWidth={1}
           />
         </g>
@@ -171,12 +156,13 @@ const TempAnno = ({mouseX, mouseY, start, end, foot, height, state}) =>
     {
       return(
       <g>
+          <Pointer mouseX={mouseX} height={height}/>
           <line
             x1={start}
             y1={0}
             x2={start}
             y2={foot}
-            stroke="#555555"
+            stroke={cursorColor}
             strokeWidth={1}
           />
           <line
@@ -184,7 +170,7 @@ const TempAnno = ({mouseX, mouseY, start, end, foot, height, state}) =>
             y1={mouseY}
             x2={end}
             y2={foot}
-            stroke="#555555"
+            stroke={cursorColor}
             strokeWidth={1}
           />
           <line
@@ -192,10 +178,26 @@ const TempAnno = ({mouseX, mouseY, start, end, foot, height, state}) =>
             y1={mouseY}
             x2={start}
             y2={mouseY}
-            stroke="#555555"
+            stroke={cursorColor}
             strokeWidth={1}
           />
         </g>);
     }
    else return null;
+}
+
+const Pointer = ({mouseX, height}) => 
+{
+  return(
+        <g>
+          <line
+            x1={mouseX}
+            y1={0}
+            x2={mouseX}
+            y2={height}
+            stroke={cursorColor}
+            strokeWidth={1}
+          />
+        </g>
+      );
 }

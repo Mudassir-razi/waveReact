@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-
+import { useAppConfig } from "../core/config";
 /**
  * TimingAnnotations
  * 
@@ -8,9 +8,8 @@ import React, { useState, useRef, useEffect } from 'react';
  * 
  * @param {Array} annotations - Array of {text, start, end, head, foot}
  * @param {Function} onUpdate - Callback(index, newAnnotation) when text changes
- * @param {Object} config - { dx: pixelsPerTimeUnit }
  */
-export default function TimingAnnotations({ mode, annotations = [], onUpdate, config = { dx: 30 } }) {
+export default function TimingAnnotations({ mode, annotations = [], onUpdate }) {
   const [editingIdx, setEditingIdx] = useState(null);
   const [editText, setEditText] = useState('');
   const inputRef = useRef(null);
@@ -47,11 +46,12 @@ export default function TimingAnnotations({ mode, annotations = [], onUpdate, co
     }
   };
 
+  const dx = useAppConfig().config.dx;
   return (
+    
     <g id="timing-annotations">
       {annotations.map((ann, idx) => {
         const { text, start, end, head, foot } = ann;
-        const { dx } = config;
 
         // Compute positions
         const x1 = start * dx;
@@ -59,7 +59,7 @@ export default function TimingAnnotations({ mode, annotations = [], onUpdate, co
         const xMid = (x1 + x2) / 2;
         const yHead = head;
         const yFoot = foot;
-        const yMid = (yHead + yFoot) / 2;
+        const yMid = yHead;
 
         const isEditing = editingIdx === idx;
 

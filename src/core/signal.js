@@ -1,9 +1,11 @@
 import { getShapeSegment, getLineSegment, getShapeSegmentForce, initRender } from "./segmentRenderer";
 import { getTextSegment, initTextRenderer, getTextSegmentForce } from "./segmentTextRenderer";
-import { forwardRef, useEffect, useRef, useState } from "react";
+import { forwardRef, useState } from "react";
 import React, { useMemo } from "react";
 import {Grid, Cursor} from "./grid";
 import TimingAnnotations from "./annotation";
+import { useAppConfig } from "../core/config";
+
 
 const div = 4;
 //coordinate lookup table
@@ -30,7 +32,7 @@ export function getBuses()
 }
 
 //returns the main layer of the canvas, with all the signals rendered onto it
-const SignalWindow = forwardRef(({pos, signals, anno, config, maxWaveLength, height, width, viewMode, mouseDownSVG, mouseUpSVG, mousePrevX, mode, state}, ref) => 
+const SignalWindow = forwardRef(({pos, signals, anno, maxWaveLength, height, width, viewMode, mouseDownSVG, mouseUpSVG, mode, state, start, end, foot}, ref) => 
 {
   const [mouseX, setMouseX] = useState(null);
   const [mouseY, setMouseY] = useState(null);
@@ -86,7 +88,6 @@ const SignalWindow = forwardRef(({pos, signals, anno, config, maxWaveLength, hei
     >
     <DiagonalHatchPattern/>
     <Grid
-      config={config}
       maxWaveLength={maxWaveLength}
       signalCount={signals.length}
     />
@@ -96,19 +97,18 @@ const SignalWindow = forwardRef(({pos, signals, anno, config, maxWaveLength, hei
       height={height} 
       mode={mode}
       state={state}
-      mousePrevX={mousePrevX} 
+      start={start}
+      end={end}
+      foot={foot}
     />
     <AllSignals
       signals={signals}
-      config={config}
       viewMode={viewMode}
     />
     <TimingAnnotations
       annotations={anno}
-      config={config}
       mode={mode === "annotation"}
       state={state}
-      mousePrevX={mousePrevX}
     />
     </svg>
 
@@ -119,10 +119,10 @@ export default SignalWindow;
 
 function AllSignals({
   signals,
-  config,
   viewMode,
 }) {
 
+    const config = useAppConfig().config;
     return signals
       .map((signal, i) => {
         if (
@@ -131,7 +131,7 @@ function AllSignals({
         ) {
           return null;
         }
-
+        
         const color =
           Object.keys(signal).includes("color") &&
           Object.keys(busColorScheme).includes(signal.color)

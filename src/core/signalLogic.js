@@ -13,7 +13,6 @@ export function modifyOnMouseEvent(signals, timeStamp_, signalIdx, timeStampPrev
     if (signalIdx !== signalIdxPrev) {
         return signals;
     }
-
     
     const splittedWave = expandWavePattern(currentSignal.wave).split(' '); 
     const currentWave = splittedWave[0];
@@ -21,9 +20,9 @@ export function modifyOnMouseEvent(signals, timeStamp_, signalIdx, timeStampPrev
 
     let newWave = currentWave;
 
+    //Click on same bit
     if (timeStampPrev === timeStamp) {
         
-        //Click on same bit 
         if(timeStamp < currentWave.length){
             const currentSymbol = getEffectiveSymbol(currentWave, timeStamp);
             const newVal = action === 'erase' ? '' :  (currentSymbol === action ? currentSymbol : action);

@@ -5,6 +5,7 @@ import Dashboard from './comp/dashboard';
 import reportWebVitals from './reportWebVitals';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { AppConfigProvider } from "./core/config";
 
 const theme = createTheme({
 
@@ -73,7 +74,9 @@ root.render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Dashboard />
+      <AppConfigProvider>
+        <Dashboard />
+      </AppConfigProvider>
     </ThemeProvider>
   </React.StrictMode>
 );

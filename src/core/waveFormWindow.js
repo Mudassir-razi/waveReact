@@ -6,15 +6,17 @@ import {combineAndSaveSVG} from "./fileSys";
 import { useState, useEffect, useRef } from "react";
 import {getHierarchy, getSignalNames, getMaxLevel, getMaxNameLength, standardizeSignal, getMaxWaveLength} from "./waveFormWindowManager";
 import {Box} from '@mui/material';
+import { useAppConfig } from "../core/config";
 
 var finalSVG;
 export function getSVG(){return finalSVG;}
 
-export default function WaveFormWindow({signals, anno, mousePrevX, mode, state, config, mouseDownSVG, mouseUpSVG})
+export default function WaveFormWindow({signals, anno, mode, state, start, end, foot, mouseDownSVG, mouseUpSVG})
 {
     //console.log("Waveform window");
     //To calculate viewport size
     const containerRef = useRef(null);
+    const config = useAppConfig().config;
     const[viewport, setViewport] = useState({});
     //.....................................Custom scroll....................
     const scrollRef = useRef(null);
@@ -76,6 +78,7 @@ export default function WaveFormWindow({signals, anno, mousePrevX, mode, state, 
     const totalHeight = (standardSignal.length+1) * (config.dy + config.offsetY);
     const totalWidth = (maxWaveLength+3) * config.dx;
 
+    //console.log(nameDivWidth, config.indentPerLevel, maxLevel);
     //after rendering, combine all and store it for saving
     useEffect(() => {
         finalSVG = combineAndSaveSVG(scrollRef.current, rulerRef.current, namesRef.current, totalWidth, totalHeight);
@@ -108,7 +111,6 @@ export default function WaveFormWindow({signals, anno, mousePrevX, mode, state, 
                 hierarchy={hierarchy}
                 height={waveformSVGHeight}
                 width={nameDivWidth}
-                config={config}
                 viewMode={false}
             />
         </Box>
@@ -134,7 +136,6 @@ export default function WaveFormWindow({signals, anno, mousePrevX, mode, state, 
             >
             <TimeRuler
                 ref={rulerRef}
-                config={config}
                 maxWaveLength={maxWaveLength}
             />
             </Box>
@@ -153,7 +154,6 @@ export default function WaveFormWindow({signals, anno, mousePrevX, mode, state, 
                 signals={standardSignal}
                 anno={anno}
                 maxWaveLength={maxWaveLength}
-                config={config}
 
                 height={waveformSVGHeight}
                 width={waveFormSVGWidth}
@@ -164,7 +164,9 @@ export default function WaveFormWindow({signals, anno, mousePrevX, mode, state, 
 
                 mode={mode}
                 state={state}
-                mousePrevX={mousePrevX}
+                start={start}
+                end={end}
+                foot={foot}
             />
             </Box>
         </Box>
