@@ -159,7 +159,7 @@ const TempAnno = ({mouseX, mouseY, start, end, foot, height, state}) =>
           <Pointer mouseX={mouseX} height={height}/>
           <line
             x1={start}
-            y1={0}
+            y1={mouseY}
             x2={start}
             y2={foot}
             stroke={cursorColor}

@@ -7,14 +7,15 @@ import { useAppConfig } from "../core/config";
 
 
 
-const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width, viewMode}, ref) =>
+const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width}, ref) =>
 {
     const namePlateWidth = width;
+    const config = useAppConfig().config;
     const namePlateHeight= height;
     const nameOffset = width - 20;//maxLevel * config.indentPerLevel + config.nameStart;
-    const textColor = viewMode ? "black" : "white";
-    const bgColor   = viewMode ? "white" : "transparent";
-    const config = useAppConfig().config;
+    const textColor = config.darkMode ? "white" : "black" ;
+    const bgColor   = "transparent";
+    
         return (
             <svg
                 x={pos.x}
