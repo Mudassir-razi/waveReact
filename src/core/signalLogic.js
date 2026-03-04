@@ -1,10 +1,14 @@
 import { flattenSignals } from "./parser";
 import { expandWavePattern, standardizeSignal } from "./waveFormWindowManager";
+import { getBuses } from "./signal";
 
 export function modifyOnMouseEvent(signals, timeStamp_, signalIdx, timeStampPrev_, signalIdxPrev, action) {
 
     const flatSignals = standardizeSignal(flattenSignals(signals));
     const currentSignal = flatSignals[signalIdx];
+
+    const busScheme = getBuses();
+    const busKeys = Object.keys(busScheme);
 
     const scale = currentSignal.scale || 1;
     const timeStamp = Math.floor(timeStamp_ / scale);
@@ -38,7 +42,16 @@ export function modifyOnMouseEvent(signals, timeStamp_, signalIdx, timeStampPrev
         }
     } else {
         // Click and drag
-        const val = action === 'erase' ? '' : getEffectiveSymbol(currentWave, timeStampPrev);
+        let val;
+        if (action === 'erase') {
+            val = '';
+        } else if (busKeys.includes(action)) {
+            // For bus letters, always use the selected bus character
+            val = action;
+        } else {
+            // Preserve existing behaviour for other tools (1/0/p/n/…)
+            val = getEffectiveSymbol(currentWave, timeStampPrev);
+        }
         const start = Math.min(timeStampPrev, timeStamp);
         const end = Math.max(timeStampPrev, timeStamp);
         newWave = setRange(currentWave, start, end, val);

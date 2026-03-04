@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import Dashboard from './comp/dashboard';
+import UserGuide from './comp/UserGuide';
 import reportWebVitals from './reportWebVitals';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -10,6 +11,7 @@ import { AppConfigProvider, useAppConfig } from "./core/config";
 function ThemedRoot() {
   const { config } = useAppConfig();
   const darkMode = config.darkMode ?? true;
+  const isUserGuide = typeof window !== "undefined" && window.location.search.includes("userguide");
 
   const theme = React.useMemo(() => createTheme({
     components: {
@@ -73,7 +75,7 @@ function ThemedRoot() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Dashboard />
+      {isUserGuide ? <UserGuide /> : <Dashboard />}
     </ThemeProvider>
   );
 }

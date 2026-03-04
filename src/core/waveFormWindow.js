@@ -1,17 +1,36 @@
-import  SignalNameDiv from "../comp/signalNameDiv";
-import  SignalWindow from "./signal";
+import SignalNameDiv from "../comp/signalNameDiv";
+import SignalWindow from "./signal";
 import { TimeRuler } from "./grid";
 import { flattenSignals } from "../core/parser";
-import {combineAndSaveSVG} from "./fileSys";
+import { combineAndSaveSVG } from "./fileSys";
 import { useState, useEffect, useRef } from "react";
-import {getHierarchy, getSignalNames, getMaxLevel, getMaxNameLength, standardizeSignal, getMaxWaveLength} from "./waveFormWindowManager";
-import {Box} from '@mui/material';
+import {
+  getHierarchy,
+  getSignalNames,
+  getMaxLevel,
+  getMaxNameLength,
+  standardizeSignal,
+  getMaxWaveLength,
+} from "./waveFormWindowManager";
+import { Box } from "@mui/material";
 import { useAppConfig } from "../core/config";
 
 var finalSVG;
 export function getSVG(){return finalSVG;}
 
-export default function WaveFormWindow({signals, anno, mode, state, start, end, foot, mouseDownSVG, mouseUpSVG})
+export default function WaveFormWindow({
+    signals,
+    anno,
+    mode,
+    state,
+    start,
+    end,
+    foot,
+    mouseDownSVG,
+    mouseUpSVG,
+    annotationMode,
+    onAnnotationUpdate,
+})
 {
     //console.log("Waveform window");
     //To calculate viewport size
@@ -167,6 +186,8 @@ export default function WaveFormWindow({signals, anno, mode, state, start, end, 
                 start={start}
                 end={end}
                 foot={foot}
+                annotationMode={annotationMode}
+                onAnnotationUpdate={onAnnotationUpdate}
             />
             </Box>
         </Box>

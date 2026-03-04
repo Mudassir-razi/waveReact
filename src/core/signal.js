@@ -32,7 +32,24 @@ export function getBuses()
 }
 
 //returns the main layer of the canvas, with all the signals rendered onto it
-const SignalWindow = forwardRef(({pos, signals, anno, maxWaveLength, height, width, viewMode, mouseDownSVG, mouseUpSVG, mode, state, start, end, foot}, ref) => 
+const SignalWindow = forwardRef(({
+  pos,
+  signals,
+  anno,
+  maxWaveLength,
+  height,
+  width,
+  viewMode,
+  mouseDownSVG,
+  mouseUpSVG,
+  mode,
+  state,
+  start,
+  end,
+  foot,
+  annotationMode,
+  onAnnotationUpdate,
+}, ref) => 
 {
   const [mouseX, setMouseX] = useState(null);
   const [mouseY, setMouseY] = useState(null);
@@ -107,8 +124,9 @@ const SignalWindow = forwardRef(({pos, signals, anno, maxWaveLength, height, wid
     />
     <TimingAnnotations
       annotations={anno}
-      mode={mode === "annotation"}
+      mode={mode === "annotation" && annotationMode === "edit"}
       state={state}
+      onUpdate={onAnnotationUpdate}
     />
     </svg>
 

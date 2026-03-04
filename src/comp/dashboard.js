@@ -3,12 +3,13 @@ import { useRef, useState, useEffect } from "react";
 import NavBar from "./navBar";
 import SignalEditor from "./Editor";
 import { parse2List, parse2String, checkError } from "../core/parser";
-import {manageTabs} from '../core/tabsManager'
+import { manageTabs } from "../core/tabsManager";
 import { modifyOnMouseEvent } from "../core/signalLogic";
 import WaveformTools from "./waveformTools";
 import { getSVG } from "../core/waveFormWindow";
 import { openJSONFile, saveJSONFile } from "../core/fileSys";
 import { useAppConfig } from "../core/config";
+import PrefMenu from "./prefMenu";
 
 import {
   Box,
@@ -84,12 +85,24 @@ export default function Dashboard() {
   //Tabs handler ends..........................................................................................................
 
 
-  //Waveform Button handler
-  const[waveFormButtonSelection, setWaveFormButtonSelection] = useState("10");
+  //Waveform / annotation tool handlers
+  const [waveFormButtonSelection, setWaveFormButtonSelection] = useState("10");
+  const [annotationTool, setAnnotationTool] = useState("add"); // 'add' | 'edit'
+
   const handleWaveFormButton = (event, newValue) => {
     setWaveFormButtonSelection(newValue);
-    //console.log(newValue);
-  }
+    setDashboardMode("signal");
+    dontChangeEditor = true;
+    editorRef.current.setValue(parse2String(currentSignalData));
+  };
+
+  const handleAnnotationToolChange = (mode) => {
+    setAnnotationTool(mode);
+    setDashboardMode("annotation");
+    setAnnoState(0);
+    dontChangeEditor = true;
+    editorRef.current.setValue(parse2String(currentAnnotationData));
+  };
 
 
   //Mouse movement control for SVG
@@ -121,6 +134,9 @@ export default function Dashboard() {
         editorRef.current.setValue(parse2String(updatedSignal));
       }
       else if(dashboardMode === "annotation"){
+        if(annotationTool !== "add"){
+          return;
+        }
         //Annotation modification logic will be here
         if(annoState === 0){
           setAnnoStart(clickNow.x);
@@ -320,6 +336,27 @@ export default function Dashboard() {
   const handleMode2Signal = () => {dontChangeEditor=true;setDashboardMode("signal"); editorRef.current.setValue(parse2String(currentSignalData));}
   const handleMode2Annotation = () => {dontChangeEditor=true;setDashboardMode("annotation");setAnnoState(0);editorRef.current.setValue(parse2String(currentAnnotationData));}
 
+  const [prefOpen, setPrefOpen] = useState(false);
+  const handleOpenPreferences = () => setPrefOpen(true);
+  const handleClosePreferences = () => setPrefOpen(false);
+
+  const handleOpenUserGuide = () => {
+    const { origin, pathname } = window.location;
+    const url = `${origin}${pathname}?userguide=1`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleAnnotationUpdate = (idx, newAnnotation) => {
+    setCurrentAnnotationData((prev) => {
+      const next = prev.map((ann, i) => (i === idx ? newAnnotation : ann));
+      if (dashboardMode === "annotation") {
+        dontChangeEditor = true;
+        editorRef.current.setValue(parse2String(next));
+      }
+      return next;
+    });
+  };
+
   return (
     <Container maxWidth={false} disableGutters sx={{ bgcolor: "#1e1e1e", height: "100vh" }}>
       <Stack spacing={0} sx={{height:"100%"}}>
@@ -374,12 +411,13 @@ export default function Dashboard() {
                     {label : "Save as PNG", onClick : handleSavePng}
             ]}
           />
-          <NavBar title="Mode"
-          items={[{label : "Signal", onClick : handleMode2Signal},
-                  {label : "Annotation", onClick : handleMode2Annotation},
-            ]} 
+          <NavBar
+            title="Help"
+            items={[
+              { label: "Preferences", onClick: handleOpenPreferences },
+              { label: "User guide", onClick: handleOpenUserGuide },
+            ]}
           />
-          <NavBar title="Help" />
         </Box>
 
         {/* Main workspace */}
@@ -404,7 +442,10 @@ export default function Dashboard() {
             p: 1,
           }}
         >
-        <WaveformTools setParentTool={handleWaveFormButton}/>
+        <WaveformTools
+          setParentTool={handleWaveFormButton}
+          onAnnotationToolChange={handleAnnotationToolChange}
+        />
 
           {/* Bottom buttons (Editor-related) */}
           <Stack spacing={1}>
@@ -449,6 +490,8 @@ export default function Dashboard() {
 
               mouseDownSVG={mouseDownSVG}
               mouseUpSVG={mouseUpSVG}
+              annotationMode={annotationTool}
+              onAnnotationUpdate={handleAnnotationUpdate}
             />
           </Box>
           {/* Drag handle */}
@@ -551,6 +594,7 @@ export default function Dashboard() {
           +
         </Button>
       </Box>
+      <PrefMenu open={prefOpen} onClose={handleClosePreferences} />
       </Stack>
     </Container>
   );
