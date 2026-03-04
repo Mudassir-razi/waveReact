@@ -110,7 +110,7 @@ export default function WaveFormWindow({
             height: "100%",
             display: "flex",
             overflow: "hidden",
-            bgcolor: "transparent"
+            bgcolor:  config.darkMode ? "transparent" : "#ffffff" 
         }}
         >
         {/* LEFT NAME PANEL */}
@@ -141,7 +141,8 @@ export default function WaveFormWindow({
             display: "flex",
             minWidth:0,
             flexDirection: "column",
-            height: "100%"   
+            height: "100%",
+            bgcolor: config.darkMode ? "transparent" : "#ffffff"   
             }}
         >
             {/* RULER */}

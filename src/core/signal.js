@@ -39,7 +39,6 @@ const SignalWindow = forwardRef(({
   maxWaveLength,
   height,
   width,
-  viewMode,
   mouseDownSVG,
   mouseUpSVG,
   mode,
@@ -98,7 +97,7 @@ const SignalWindow = forwardRef(({
       width={width} 
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      style={{ display: "block", backgroundColor: "#00000000" }}
+      style={{ display: "block", backgroundColor: useAppConfig().config.darkMode ? '#11111100' : '#fff' }}
       onMouseMove={handleMouseMove}
       onMouseDown={handleClick}
       onMouseUp={handleClickUp}
@@ -120,7 +119,7 @@ const SignalWindow = forwardRef(({
     />
     <AllSignals
       signals={signals}
-      viewMode={viewMode}
+      viewMode={useAppConfig().config.darkMode}
     />
     <TimingAnnotations
       annotations={anno}
@@ -155,8 +154,8 @@ function AllSignals({
           Object.keys(busColorScheme).includes(signal.color)
             ? darkenHexColor(busColorScheme[signal.color], 20)
             : viewMode
-            ? "black"
-            : "white";
+            ? "white"
+            : "black";
 
         return (
           <Signal

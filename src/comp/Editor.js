@@ -1,8 +1,11 @@
 import { useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
+import { useAppConfig } from "../core/config";
 
 export default function SignalEditor({onChange, value, viewMode=false, editorRef }) {
   const monacoRef = useRef(null);
+  const { config } = useAppConfig();
+  const darkMode = config.darkMode ?? true;
 
   const handleEditorMount = (editor, monaco) => {
     // External reference for parent
@@ -22,18 +25,6 @@ export default function SignalEditor({onChange, value, viewMode=false, editorRef
     editor._ro = ro; // store observer for cleanup
   };
 
-  //Theme switching
-  useEffect(() => {
-    if (!monacoRef.current) return;
-
-    monacoRef.current.editor.defineTheme("my-theme", {
-      base: "vs-dark",
-      inherit: true,
-    });
-
-    monacoRef.current.editor.setTheme("my-theme");
-  }, [viewMode]);
-
   // Cleanup ResizeObserver on unmount
   useEffect(() => {
     return () => {
@@ -46,10 +37,10 @@ export default function SignalEditor({onChange, value, viewMode=false, editorRef
     <Editor
       language="javascript"
       height="100%"
+      theme={darkMode ? "vs-dark" : "vs"}
       onChange={onChange}
       onMount={handleEditorMount}
       options={{
-        theme : "vs-dark",
         minimap: { enabled: false },
         fontSize: 14,
         scrollBeyondLastLine: false, 

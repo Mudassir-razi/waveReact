@@ -39,6 +39,7 @@ let dontChangeEditor = false;
 export default function Dashboard() {
 
   const config = useAppConfig().config;
+  const darkMode = config.darkMode ?? true;
 
   //Tab stuff..............................................................................................................
   //Tabs handler starts 
@@ -358,7 +359,11 @@ export default function Dashboard() {
   };
 
   return (
-    <Container maxWidth={false} disableGutters sx={{ bgcolor: "#1e1e1e", height: "100vh" }}>
+    <Container
+      maxWidth={false}
+      disableGutters
+      sx={{ bgcolor: darkMode ? "#1e1e1e" : "#f3f4f6", height: "100vh" }}
+    >
       <Stack spacing={0} sx={{height:"100%"}}>
 
         {/* Banner */}
@@ -434,8 +439,8 @@ export default function Dashboard() {
         <Box
           sx={{
             width: 100,
-            bgcolor: "#252526",
-            borderRight: "1px solid #333",
+            bgcolor: darkMode ? "#252526" : "#f9fafb",
+            borderRight: `1px solid ${darkMode ? "#333" : "#d1d5db"}`,
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
@@ -469,7 +474,7 @@ export default function Dashboard() {
           <Box
             sx={{
               flex: 1,
-              bgcolor: "#1f1f1f",
+              bgcolor: darkMode ? "transparent" : "#ffffff" ,
               display: "flex",
               alignItems: "left",
               justifyContent: "left",

@@ -14,7 +14,7 @@ const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width}, 
     const namePlateHeight= height;
     const nameOffset = width - 20;//maxLevel * config.indentPerLevel + config.nameStart;
     const textColor = config.darkMode ? "white" : "black" ;
-    const bgColor   = "transparent";
+    const bgColor   = config.darkMode ? "transparent" : "white";
     
         return (
             <svg
