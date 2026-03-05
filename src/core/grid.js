@@ -32,7 +32,7 @@ export function Grid({
   return (
     <path
       d={pathD}
-      stroke="lightgrey"
+      stroke={config.darkMode ? "lightGrey" : "#535353"}
       strokeOpacity={0.4}
       strokeWidth={1}
       strokeDasharray="4 4"
@@ -126,7 +126,7 @@ export const Cursor = React.memo(function Cursor({mouseX, mouseY, start, end, fo
 
 const TempAnno = ({mouseX, mouseY, start, end, foot, height, state}) => 
 {
-    console.log(start, foot);
+    //console.log(start, foot);
     if(state === 0)return <Pointer mouseX={mouseX} height={height}/>;
     else if(state === 1)
     {

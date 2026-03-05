@@ -261,6 +261,7 @@ export default function Dashboard() {
     try{
       openJSONFile().then((data) => {
         setAllTabsData(data);
+        setCurrentAnnotationData(data[0].annotation || []);
         editorRef.current.setValue(parse2String(data[0].waveform));
         setCurrentSignalData(data[0].waveform);
       });
@@ -270,7 +271,8 @@ export default function Dashboard() {
   const handleSaveFile = () =>
   {
     try{
-    const allTabsUpdatedData = manageTabs(allTabsData, selectedTabIndex, 'mod', currentSignalData);
+    const allTabsUpdatedData = manageTabs(allTabsData, selectedTabIndex, 'mod', currentSignalData, currentAnnotationData);
+    setAllTabsData(allTabsUpdatedData);
     saveJSONFile(allTabsUpdatedData);
     }catch(err)
     {alert(err);}
