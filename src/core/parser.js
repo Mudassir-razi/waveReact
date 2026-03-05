@@ -1,4 +1,4 @@
-const KEYWORDS = ["name", "data", "wave", "width", "scale", "color"];
+const KEYWORDS = ["name", "data", "wave", "width", "scale", "color", "phase"];
 
 /**
  * Parses a JSON string into an object or list of objects.

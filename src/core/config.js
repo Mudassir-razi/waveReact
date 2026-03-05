@@ -1,11 +1,45 @@
-export const settings = {
-    signalCount : 2,
-    timeStamp : 20,
-    dx : 50,
-    dy : 30,
-    skew : 0.125,
-    textOffset : 45,
-    offsetY : 5,
-    gridColor : "grey",
-    signalColor : "white",
+import { createContext, useContext, useState } from "react"
+
+const AppConfigContext = createContext(null)
+
+export const DEFAULT_CONFIG = {
+  dx: 30,
+  dy: 22,
+  timeStamp: 40,
+  signalCount: 5,
+  offsetY: 10,
+  offsetX: 20,
+
+  //Name div parameter
+  indentPerLevel: 30,
+  rulerHeight: 20,
+  charWidth: 6.5,
+  nameStart: 5,
+
+  darkMode: true,
 };
+
+export function AppConfigProvider({ children }) {
+  const [config, setConfig] = useState(DEFAULT_CONFIG)
+
+  const updateConfig = (updates) => {
+    setConfig(prev => ({
+      ...prev,
+      ...updates
+    }))
+  }
+
+  return (
+    <AppConfigContext.Provider value={{ config, updateConfig }}>
+      {children}
+    </AppConfigContext.Provider>
+  )
+}
+
+export function useAppConfig() {
+  const ctx = useContext(AppConfigContext)
+  if (!ctx) {
+    throw new Error("useAppConfig must be used inside AppConfigProvider")
+  }
+  return ctx
+}

@@ -2,21 +2,29 @@
 //const baseX = 20; // Base X position for rendering
 //const indentPerLevel = 20; // Indentation per nesting level
 //const charWidth = 6; // Width of the bracket
+import { forwardRef } from "react";
+import { useAppConfig } from "../core/config";
 
-export default function SignalNameDiv({pos, signalNames, hierarchy, maxLevel, height, width, config, viewMode=true}) {
 
+
+const SignalNameDiv = forwardRef(({pos, signalNames, hierarchy, height, width}, ref) =>
+{
     const namePlateWidth = width;
+    const config = useAppConfig().config;
     const namePlateHeight= height;
     const nameOffset = width - 20;//maxLevel * config.indentPerLevel + config.nameStart;
-    const textColor = viewMode ? "black" : "white";
-    const bgColor   = viewMode ? "white" : "transparent";
-
+    const textColor = config.darkMode ? "white" : "black" ;
+    const bgColor   = config.darkMode ? "transparent" : "white";
+    
         return (
             <svg
                 x={pos.x}
                 y={pos.y}
+                ref={ref}
                 width={namePlateWidth}
                 height={namePlateHeight}
+                viewBox={`0 0 ${namePlateWidth} ${namePlateHeight}`}
+                display="block"
             >
                 <rect
                     key={'backDropNameDiv'}
@@ -31,18 +39,18 @@ export default function SignalNameDiv({pos, signalNames, hierarchy, maxLevel, he
                   if(splitName.length === 1){
                   return (
                     <text
-                      key={i}
-                      x={0}                   
-                      y={0}           
-                      fill={textColor}
+                        key={i}
+                        x={0}                   
+                        y={0}           
+                        fill={textColor}
                         textAnchor="end"
                         fontSize={14}
                         fontFamily="monospace"
-                        transform={`translate(${nameOffset}, ${(i+1) * (config.dy + config.offsetY)})`}
+                        transform={`translate(${nameOffset}, ${(i+1) * (config.dy + config.offsetY) + pos.y})`}
                     >
                         {name}
                     </text>
-                )}
+                    )}
                     else{
                         return (
                             <>
@@ -54,19 +62,19 @@ export default function SignalNameDiv({pos, signalNames, hierarchy, maxLevel, he
                                 textAnchor="end"
                                 fontSize={14}
                                 fontFamily="monospace"
-                                transform={`translate(${nameOffset}, ${(i+1-diff) * (config.dy + config.offsetY)})`}
+                                transform={`translate(${nameOffset}, ${(i+1-diff) * (config.dy + config.offsetY) + pos.y})`}
                             >
                                 {splitName[0]}
                             </text>
                             <text
-                            key={i}
+                            key={i+2555}
                             x={0}                   
                             y={0}           
                             fill={textColor}
                                 textAnchor="end"
                                 fontSize={14}
                                 fontFamily="monospace"
-                                transform={`translate(${nameOffset}, ${(i+1+diff) * (config.dy + config.offsetY)})`}
+                                transform={`translate(${nameOffset}, ${(i+1+diff) * (config.dy + config.offsetY) + pos.y})`}
                             >
                                 {splitName[1]}
                             </text>
@@ -75,15 +83,17 @@ export default function SignalNameDiv({pos, signalNames, hierarchy, maxLevel, he
                     }
                 })}
                 {hierarchy.map((b, i) => (
-                    <RightBracket bracket={b} config={config} color={textColor}></RightBracket>
+
+                    <RightBracket bracket={b} color={textColor} posy={pos.y}></RightBracket>
                 ))}
             </svg>
         );
-}
+});
 
+export default SignalNameDiv;
 
-function RightBracket({ bracket, config, color }) {
-  
+function RightBracket({ bracket, color, posy }) {
+    const config = useAppConfig().config;
     if(!Object.keys(bracket).includes('text'))return null;
     const groupText = typeof bracket.text === 'string' ? bracket.text : " ";
 
@@ -92,9 +102,9 @@ function RightBracket({ bracket, config, color }) {
     const midY = (config.dy + config.offsetY) * (((bracket.start + bracket.end) / 2) + 1);
     
     const d = `
-        M ${x} ${((bracket.start + 1) * (config.dy + config.offsetY)) - 10}
+        M ${x} ${((bracket.start + 1) * (config.dy + config.offsetY)) - 10 + posy}
         h ${-arm}
-        V ${((bracket.end + 1) * (config.dy + config.offsetY)) + 10}
+        V ${((bracket.end + 1) * (config.dy + config.offsetY)) + 10 + posy}
         h ${arm}
     `;
 
@@ -116,7 +126,7 @@ function RightBracket({ bracket, config, color }) {
             fontSize={12}
             dominantBaseline="middle"
             textAnchor="middle"
-            transform={`translate(${x - (3*arm)}, ${midY}) rotate(-90)`}
+            transform={`translate(${x - (3*arm)}, ${midY + posy}) rotate(-90)`}
             >
             {groupText}
         </text>

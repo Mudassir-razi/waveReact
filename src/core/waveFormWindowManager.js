@@ -106,7 +106,7 @@ export function standardizeSignal(signals)
             var name = Object.keys(signals[i]).includes("phase") ? signals[i].name : " ";
             var phase = Object.keys(signals[i]).includes("phase") ? parseInt(signals[i].phase) : 0;
             var signal = Object.keys(signals[i]).includes("wave") ? expandWavePattern(signals[i].wave) : " ";
-            var data = Object.keys(signals[i]).includes("data") ? expandDataPatterns(signals[i].data) : " ";
+            var data = Object.keys(signals[i]).includes("data") ? preprocessDataKey(signals[i].data) : "";
             var lineWidth = Object.keys(signals[i]).includes("width") ? parseInt(signals[i].width) : 1;
             var scale = Object.keys(signals[i]).includes("scale") && signals[i].scale !== " " && signals[i].scale !== ""?  signals[i].scale : 1;
 
@@ -119,6 +119,27 @@ export function standardizeSignal(signals)
       return standardSignal;
 }
 
+function preprocessDataKey(input) {
+
+  // Split only by comma (top-level)
+  const segments = input.split(",");
+
+  const finalParts = [];
+
+  segments.forEach(segment => {
+    const trimmed = segment.trim();
+
+    const expanded = expandDataPatterns(trimmed);
+
+    // expansion may return multiple comma-separated values
+    expanded.split(",").forEach(p => {
+      finalParts.push(p.trim());
+    });
+  });
+
+  return finalParts.join(",");
+}
+
 /**
  * Expands pattern of the data key depending on the code pattern.
  * First letter: u -> up-count, d -> down-count. Second letter: d -> decimal, b -> binary, h -> hexa. So, ux is upcount in hexadecimal.
@@ -126,36 +147,47 @@ export function standardizeSignal(signals)
  * @param {string} input Input code string in the data key of the waveform
  * @returns {string} Expanded version of the short code in the data key
  */
-function expandDataPatterns(input) {
-  // Match prefix, mode, arguments, suffix
-  return input.replace(/(\S*?)(ud|ub|ux|dd|db|dx)\(([^)]*)\)(\S*)/gi,
-    (_, prefix, mode, args, suffix) => {
-      let [startStr, countStr, stepStr] = args.split(',').map(s => s.trim());
-      const s = parseInt(startStr);
-      const c = parseInt(countStr);
-      const step = stepStr !== undefined ? parseInt(stepStr) : 1;
+function expandDataPatterns(segment) {
 
-      const up = mode.startsWith('u');
-      const bin = mode.endsWith('b');
-      const hex = mode.endsWith('x');
+  const pattern = /(ud|ub|ux|dd|db|dx)\(([^)]*)\)/i;
+  const match = segment.match(pattern);
 
-      let result = [];
-      for (let i = 0; i < c; i++) {
-        let value = up ? s + i * step : s - i * step;
+  // No pattern → return as-is
+  if (!match) return segment;
 
-        if (bin) {
-          value = value.toString(2);
-        } else if (hex) {
-          value = value.toString(16).toUpperCase();
-        } else {
-          value = value.toString();
-        }
+  const mode = match[1];
+  const args = match[2];
 
-        result.push(`${prefix}${value}${suffix}`);
-      }
-      return result.join(' ');
-    }
-  );
+  const [startStr, countStr, stepStr] =
+    args.split(';').map(s => s.trim());
+
+  const start = parseInt(startStr);
+  const count = parseInt(countStr);
+  const step = stepStr !== undefined ? parseInt(stepStr) : 1;
+
+  const up = mode.startsWith('u');
+  const bin = mode.endsWith('b');
+  const hex = mode.endsWith('x');
+
+  const prefix = segment.slice(0, match.index);
+  const suffix = segment.slice(match.index + match[0].length);
+
+  const results = [];
+
+  for (let i = 0; i < count; i++) {
+
+    let value = up
+      ? start + i * step
+      : start - i * step;
+
+    if (bin) value = value.toString(2);
+    else if (hex) value = value.toString(16).toUpperCase();
+    else value = value.toString();
+
+    results.push(`${prefix}${value}${suffix}`);
+  }
+
+  return results.join(",");
 }
 
 /**

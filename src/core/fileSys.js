@@ -1,115 +1,110 @@
-/**
- * Combines SVG objects and saves it in the device
- * @param {svg} signalSvg -SVG component that has the waveform 
- * @param {svg} gridSvg -SVG component that holds the background grid 
- * @param {svg} nameSvg -SVG component that holds the names of the signals 
- * @param {string} filename -Output filename 
- */
-export function combineAndSaveSVG(signalSvg, gridSvg, nameSvg, filename = 'combined.svg', viewMode, format="svg") {
-  const SVG_NS = 'http://www.w3.org/2000/svg';
+export function combineAndSaveSVG(
+  signalSvg,
+  rulerSvg,
+  nameSvg,
+  totalWidth,
+  totalHeight,
+  filename = "combined.svg"
+) {
+  const SVG_NS = "http://www.w3.org/2000/svg";
 
-  // Extract widths and height
-  const nameWidth = parseFloat(nameSvg.getAttribute('width') || 0);
-  const signalWidth = parseFloat(signalSvg.getAttribute('width') || 0);
-  const gridHeight = parseFloat(gridSvg.getAttribute('height') || 0);
-  const totalWidth = nameWidth + signalWidth;
+  if (!signalSvg || !rulerSvg || !nameSvg) {
+    console.warn("Missing SVG refs");
+    return;
+  }
 
-  // Create a combined SVG
-  const combinedSVG = document.createElementNS(SVG_NS, 'svg');
-  combinedSVG.setAttribute('xmlns', SVG_NS);
-  combinedSVG.setAttribute('width', totalWidth);
-  combinedSVG.setAttribute('height', gridHeight);
-  combinedSVG.setAttribute('viewBox', `0 0 ${totalWidth} ${gridHeight}`);
+  // Extract dimensions safely
+  const nameWidth =
+    signalNumber(nameSvg.getAttribute("width"));
 
-  // Create background rectangle
-  const bgRect = document.createElementNS(SVG_NS, "rect");
-  bgRect.setAttribute("x", 0);
-  bgRect.setAttribute("y", 0);
-  bgRect.setAttribute("width", totalWidth);
-  bgRect.setAttribute("height", gridHeight);
+  const signalWidth =
+    signalNumber(signalSvg.getAttribute("width"));
+
+  const nameHeight =
+    signalNumber(nameSvg.getAttribute("height"));
+
+  const signalHeight =
+    signalNumber(signalSvg.getAttribute("height"));
   
-  bgRect.setAttribute("fill", viewMode === 1 ? "white" : "black");
+  const rulerHeight = 
+    signalNumber(rulerSvg.getAttribute("height"));
 
-  // Helper: clone and translate group
-  function cloneGroup(sourceSvg, offsetX = 0) {
-    const g = document.createElementNS(SVG_NS, 'g');
+  const height = signalHeight + 70;
 
-    if (offsetX !== 0) {
-      g.setAttribute('transform', `translate(${offsetX}, 0)`);
-    }
+  // Create combined root
+  const combinedSvg = document.createElementNS(SVG_NS, "svg");
+  combinedSvg.setAttribute("xmlns", SVG_NS);
+  combinedSvg.setAttribute("width", totalWidth);
+  combinedSvg.setAttribute("height", totalHeight);
+  combinedSvg.setAttribute("viewBox", `0 0 ${totalWidth} ${totalHeight}`);
 
-    // Copy children
+  // Background
+  const bg = document.createElementNS(SVG_NS, "rect");
+  bg.setAttribute("width", totalWidth);
+  bg.setAttribute("height", height);
+  bg.setAttribute("fill", "#292929");
+  combinedSvg.appendChild(bg);
+
+  // Helper to copy children safely
+  function appendSvgContent(sourceSvg, offsetX = 0, offsetY=0) {
+    const group = document.createElementNS(SVG_NS, "g");
+    group.setAttribute("transform", `translate(${offsetX}, ${offsetY})`);
+
     Array.from(sourceSvg.childNodes).forEach(node => {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        g.appendChild(node.cloneNode(true));
-      }
+      group.appendChild(node.cloneNode(true));
     });
 
-    return g;
+    combinedSvg.appendChild(group);
   }
 
-  // Step 1: grid (shifted right)
-  const gridGroup = cloneGroup(gridSvg, nameWidth);
-  removeSvgChildrenById(gridGroup, ['selectionRect', 'selectionLine1', 'selectionLine2']);
-  // Step 2: signal (shifted right)
-  const signalGroup = cloneGroup(signalSvg, nameWidth);
+  // Append name area
+  appendSvgContent(nameSvg, 0, 0);
 
-  // Step 3: name (at x = 0)
-  const nameGroup = cloneGroup(nameSvg, 0);
-  nameGroup.setAttribute("font-family", "monospace");
-  nameGroup.setAttribute("font-weight", "bold");
+  // Append ruler
+  appendSvgContent(rulerSvg, nameWidth, 0);
 
-  // Append layers in back-to-front order
-  combinedSVG.appendChild(bgRect);      // Background color
-  combinedSVG.appendChild(gridGroup);   // back
-  combinedSVG.appendChild(signalGroup); // middle
-  combinedSVG.appendChild(nameGroup);   // front
+  // Append signal
+  appendSvgContent(signalSvg, nameWidth, rulerHeight);
 
+  return combinedSvg;
+  // Serialize & download
+  // const serializer = new XMLSerializer();
+  // const svgString = serializer.serializeToString(combinedSvg);
 
-  // Serialize and download
-  const serializer = new XMLSerializer();
-  const svgString = serializer.serializeToString(combinedSVG);
+  // const blob = new Blob([svgString], { type: "image/svg+xml" });
+  // const url = URL.createObjectURL(blob);
 
+  // const link = document.createElement("a");
+  // link.href = url;
+  // link.download = filename;
+  // link.click();
 
-  if (format === "svg") {
-    // Download as SVG
-    const blob = new Blob([svgString], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}.svg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-  } else if (format === "png") {
-    // Convert to PNG using a canvas
-    const img = new Image();
-    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(svgBlob);
-
-    img.onload = function () {
-      const canvas = document.createElement("canvas");
-      canvas.width = totalWidth;
-      canvas.height = gridHeight;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-
-      canvas.toBlob((blob) => {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `${filename}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }, "image/png");
-
-      URL.revokeObjectURL(url);
-    };
-    img.src = url;
-  }
+  // URL.revokeObjectURL(url);
 }
+
+function signalNumber(value) {
+  const num = parseFloat(value);
+  return isNaN(num) ? 0 : num;
+}
+
+/**
+ * 
+ * @param {JSON} data -JSON data to save
+ * @param {string} filename -name of the file 
+ */
+export function saveJSONFile(data, filename = "data.json") {
+  const json = JSON.stringify(data, null, 2); // pretty-print with 2-space indent
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+
+  URL.revokeObjectURL(url); // cleanup
+}
+
 
 /**
  * 
@@ -147,34 +142,5 @@ export function openJSONFile() {
 
     document.body.appendChild(input);
     input.click();
-  });
-}
-
-
-/**
- * 
- * @param {JSON} data -JSON data to save
- * @param {string} filename -name of the file 
- */
-export function saveJSONFile(data, filename = "data.json") {
-  const json = JSON.stringify(data, null, 2); // pretty-print with 2-space indent
-  const blob = new Blob([json], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-
-  URL.revokeObjectURL(url); // cleanup
-}
-
-
-function removeSvgChildrenById(svgElement, idsToRemove) {
-  idsToRemove.forEach(id => {
-    const element = svgElement.querySelector(`#${id}`);
-    if (element) {
-      element.remove(); // Remove the element from the DOM
-    }
   });
 }
