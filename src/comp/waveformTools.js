@@ -5,27 +5,37 @@ import {
   Select,
   MenuItem,
   Divider,
+  Typography,
 } from "@mui/material";
 import { useState, useMemo } from "react";
 import { getBuses } from "../core/signal";
+import { useAppConfig } from "../core/config";
 
-const BTN = {
+const getBtnStyle = (darkMode) => ({
   minWidth: 32,
   height: 28,
   padding: 0,
   fontSize: 13,
   fontFamily: "monospace",
-  color: "#bbb",
-  borderColor: "#333",
+  color: darkMode ? "#bbb" : "#333",
+  borderColor: darkMode ? "#333" : "#cbd5e1",
 
   "&.Mui-selected": {
-    bgcolor: "#444",
-    color: "#fff",
-    borderColor: "#666",
+    bgcolor: darkMode ? "#444" : "#dbeafe",
+    color: darkMode ? "#fff" : "#111827",
+    borderColor: darkMode ? "#666" : "#93c5fd",
   },
-};
+});
 
-export default function WaveformTools({ setParentTool, onAnnotationToolChange }) {
+export default function WaveformTools({
+  setParentTool,
+  onAnnotationToolChange,
+  onBreakToolChange,
+}) {
+  const { config } = useAppConfig();
+  const darkMode = config.darkMode ?? true;
+  const BTN = getBtnStyle(darkMode);
+
   const busOptions = useMemo(() => {
     const buses = getBuses();
     return Object.keys(buses);
@@ -39,8 +49,12 @@ export default function WaveformTools({ setParentTool, onAnnotationToolChange })
   const onChangeButton = (event, value) => {
     if (!value) return;
     setTool(value);
-    if (value === "add" || value === "edit") {
-      if (onAnnotationToolChange) onAnnotationToolChange(value);
+    if (value.startsWith("annotation:")) {
+      if (onAnnotationToolChange) onAnnotationToolChange(value.split(":")[1]);
+      return;
+    }
+    if (value.startsWith("break:")) {
+      if (onBreakToolChange) onBreakToolChange(value.split(":")[1]);
       return;
     }
     setParentTool(event, value);
@@ -48,15 +62,22 @@ export default function WaveformTools({ setParentTool, onAnnotationToolChange })
 
   return (
     <Box sx={{ width: "100%" }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+        <Divider sx={{ flex: 1, bgcolor: darkMode ? "#444" : "#cbd5e1" }} />
+        <Typography variant="caption" sx={{ color: darkMode ? "#9ca3af" : "#6b7280" }}>
+          Signal
+        </Typography>
+        <Divider sx={{ flex: 1, bgcolor: darkMode ? "#444" : "#cbd5e1" }} />
+      </Box>
       <ToggleButtonGroup
         value={tool}
         exclusive
         onChange={onChangeButton}
         sx={{
           width: "100%",
-          border: "1px solid #222",
+          border: `1px solid ${darkMode ? "#222" : "#cbd5e1"}`,
           p: 0.5,
-          bgcolor: "#1a1a1a",
+          bgcolor: darkMode ? "#1a1a1a" : "#f8fafc",
         }}
       >
         <Box
@@ -96,8 +117,8 @@ export default function WaveformTools({ setParentTool, onAnnotationToolChange })
                 flex: 1,
                 minWidth: 0,
                 height: 28,
-                color: "#bbb",
-                bgcolor: "#111",
+                color: darkMode ? "#bbb" : "#333",
+                bgcolor: darkMode ? "#111" : "#fff",
 
                 "& .MuiSelect-select": {
                   py: 0,
@@ -105,7 +126,7 @@ export default function WaveformTools({ setParentTool, onAnnotationToolChange })
                   fontSize: 12,
                 },
 
-                "& fieldset": { borderColor: "#333" },
+                "& fieldset": { borderColor: darkMode ? "#333" : "#cbd5e1" },
               }}
             >
               {busOptions.map((key) => (
@@ -123,7 +144,13 @@ export default function WaveformTools({ setParentTool, onAnnotationToolChange })
         </Box>
       </ToggleButtonGroup>
 
-      <Divider sx={{ bgcolor: "#444", my: 1 }} />
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, my: 1 }}>
+        <Divider sx={{ flex: 1, bgcolor: darkMode ? "#444" : "#cbd5e1" }} />
+        <Typography variant="caption" sx={{ color: darkMode ? "#9ca3af" : "#6b7280" }}>
+          Annotation
+        </Typography>
+        <Divider sx={{ flex: 1, bgcolor: darkMode ? "#444" : "#cbd5e1" }} />
+      </Box>
 
       <ToggleButtonGroup
         value={tool}
@@ -131,9 +158,9 @@ export default function WaveformTools({ setParentTool, onAnnotationToolChange })
         onChange={onChangeButton}
         sx={{
           width: "100%",
-          border: "1px solid #222",
+          border: `1px solid ${darkMode ? "#222" : "#cbd5e1"}`,
           p: 0.5,
-          bgcolor: "#1a1a1a",
+          bgcolor: darkMode ? "#1a1a1a" : "#f8fafc",
         }}
       >
         <Box
@@ -144,10 +171,46 @@ export default function WaveformTools({ setParentTool, onAnnotationToolChange })
             width: "100%",
           }}
         >
-          <ToggleButton value="add" sx={BTN}>
+          <ToggleButton value="annotation:add" sx={BTN}>
             add
           </ToggleButton>
-          <ToggleButton value="edit" sx={BTN}>
+          <ToggleButton value="annotation:edit" sx={BTN}>
+            edit
+          </ToggleButton>
+        </Box>
+      </ToggleButtonGroup>
+
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, my: 1 }}>
+        <Divider sx={{ flex: 1, bgcolor: darkMode ? "#444" : "#cbd5e1" }} />
+        <Typography variant="caption" sx={{ color: darkMode ? "#9ca3af" : "#6b7280" }}>
+          Break
+        </Typography>
+        <Divider sx={{ flex: 1, bgcolor: darkMode ? "#444" : "#cbd5e1" }} />
+      </Box>
+
+      <ToggleButtonGroup
+        value={tool}
+        exclusive
+        onChange={onChangeButton}
+        sx={{
+          width: "100%",
+          border: `1px solid ${darkMode ? "#222" : "#cbd5e1"}`,
+          p: 0.5,
+          bgcolor: darkMode ? "#1a1a1a" : "#f8fafc",
+        }}
+      >
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "4px",
+            width: "100%",
+          }}
+        >
+          <ToggleButton value="break:add" sx={BTN}>
+            add
+          </ToggleButton>
+          <ToggleButton value="break:edit" sx={BTN}>
             edit
           </ToggleButton>
         </Box>

@@ -4,6 +4,7 @@ import { forwardRef, useState } from "react";
 import React, { useMemo } from "react";
 import {Grid, Cursor} from "./grid";
 import TimingAnnotations from "./annotation";
+import BreakNotations from "./breakNotation";
 import { useAppConfig } from "../core/config";
 
 
@@ -47,7 +48,10 @@ const SignalWindow = forwardRef(({
   end,
   foot,
   annotationMode,
+  breakMode,
   onAnnotationUpdate,
+  onBreakUpdate,
+  onBreakDelete,
 }, ref) => 
 {
   const [mouseX, setMouseX] = useState(null);
@@ -65,28 +69,32 @@ const SignalWindow = forwardRef(({
     setMouseY(cursorPoint.y);
   };
 
-  // Handle clicks (example: log or select)
-  const handleClick = (event) => {
-    const svg = event.currentTarget;
-    const pt = svg.createSVGPoint();
-    pt.x = event.clientX;
-    pt.y = event.clientY;
-    const clickPoint = pt.matrixTransform(svg.getScreenCTM().inverse());
-    //console.log("Clicked at", clickPoint.x, clickPoint.y);
-    mouseDownSVG({ x: clickPoint.x, y: clickPoint.y }); 
-    // you can update other states here if needed
-  };
+  const annotationItems = useMemo(
+    () =>
+      (anno || [])
+        .map((item, sourceIndex) => ({ ...item, sourceIndex }))
+        .filter(
+          (item) =>
+            typeof item.start === "number" &&
+            typeof item.end === "number" &&
+            typeof item.head === "number" &&
+            typeof item.foot === "number"
+        ),
+    [anno]
+  );
 
-  const handleClickUp = (event) => {
-    const svg = event.currentTarget;
-    const pt = svg.createSVGPoint();
-    pt.x = event.clientX;
-    pt.y = event.clientY;
-    const clickPoint = pt.matrixTransform(svg.getScreenCTM().inverse());
-    //console.log("Clicked up at", clickPoint.x, clickPoint.y);
-    mouseUpSVG({ x: clickPoint.x, y: clickPoint.y }); 
-    // you can update other states here if needed
-  };
+  const breakItems = useMemo(
+    () =>
+      (anno || [])
+        .map((item, sourceIndex) => ({ ...item, sourceIndex }))
+        .filter(
+          (item) =>
+            typeof item.signalIndex === "number" &&
+            typeof item.timeStamp === "number" &&
+            typeof item.global === "boolean"
+        ),
+    [anno]
+  );
 
   return(
     <svg 
@@ -99,8 +107,8 @@ const SignalWindow = forwardRef(({
       viewBox={`0 0 ${width} ${height}`}
       style={{ display: "block", backgroundColor: useAppConfig().config.darkMode ? '#11111100' : '#fff' }}
       onMouseMove={handleMouseMove}
-      onMouseDown={handleClick}
-      onMouseUp={handleClickUp}
+      onMouseDown={mouseDownSVG}
+      onMouseUp={mouseUpSVG}
     >
     <DiagonalHatchPattern/>
     <Grid
@@ -122,10 +130,17 @@ const SignalWindow = forwardRef(({
       viewMode={useAppConfig().config.darkMode}
     />
     <TimingAnnotations
-      annotations={anno}
+      annotations={annotationItems}
       mode={mode === "annotation" && annotationMode === "edit"}
       state={state}
       onUpdate={onAnnotationUpdate}
+    />
+    <BreakNotations
+      breaks={breakItems}
+      signalCount={signals.length}
+      mode={mode === "break" && breakMode === "edit"}
+      onUpdate={onBreakUpdate}
+      onDelete={onBreakDelete}
     />
     </svg>
 

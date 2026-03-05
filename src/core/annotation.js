@@ -76,7 +76,9 @@ export default function TimingAnnotations({
 
   const handleCommit = (idx) => {
     if (editText.trim() && onUpdate) {
-      onUpdate(idx, { ...annotations[idx], text: editText.trim() });
+      const sourceIndex = annotations[idx]?.sourceIndex ?? idx;
+      const { sourceIndex: _skip, ...rest } = annotations[idx] || {};
+      onUpdate(sourceIndex, { ...rest, text: editText.trim() });
     }
     setEditingIdx(null);
     setEditText('');
@@ -112,7 +114,8 @@ export default function TimingAnnotations({
     const ann = annotations[index];
     if (!ann) return;
 
-    let updated = { ...ann };
+    const { sourceIndex: _skip, ...baseAnnotation } = ann;
+    let updated = { ...baseAnnotation };
     let changed = false;
 
     const dxStep = 1;
@@ -154,7 +157,8 @@ export default function TimingAnnotations({
 
     if (changed) {
       e.preventDefault();
-      onUpdate(index, updated);
+      const sourceIndex = annotations[index]?.sourceIndex ?? index;
+      onUpdate(sourceIndex, updated);
     }
   };
 

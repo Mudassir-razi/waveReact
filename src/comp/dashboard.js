@@ -70,7 +70,7 @@ export default function Dashboard() {
     //console.log(newValue);
     editorRef.current.setValue(parse2String(allTabsData[newValue].waveform));
     setCurrentSignalData(allTabsData[newValue].waveform);
-    setCurrentAnnotationData(allTabsData[newValue].annotation);
+    setCurrentAnnotationData(allTabsData[newValue].annotation || []);
   }
 
   //Tab Buttons handlers
@@ -82,13 +82,15 @@ export default function Dashboard() {
     setSelectedTabIndex(newSelectedTabIndex);
     editorRef.current.setValue(parse2String(allTabsData[newSelectedTabIndex].waveform));
     setCurrentSignalData(allTabsData[newSelectedTabIndex].waveform);
+    setCurrentAnnotationData(allTabsData[newSelectedTabIndex].annotation || []);
   }
   //Tabs handler ends..........................................................................................................
 
 
   //Waveform / annotation tool handlers
-  const [waveFormButtonSelection, setWaveFormButtonSelection] = useState("10");
+  const [waveFormButtonSelection, setWaveFormButtonSelection] = useState("1");
   const [annotationTool, setAnnotationTool] = useState("add"); // 'add' | 'edit'
+  const [breakTool, setBreakTool] = useState("add"); // 'add' | 'edit'
 
   const handleWaveFormButton = (event, newValue) => {
     setWaveFormButtonSelection(newValue);
@@ -100,6 +102,14 @@ export default function Dashboard() {
   const handleAnnotationToolChange = (mode) => {
     setAnnotationTool(mode);
     setDashboardMode("annotation");
+    setAnnoState(0);
+    dontChangeEditor = true;
+    editorRef.current.setValue(parse2String(currentAnnotationData));
+  };
+
+  const handleBreakToolChange = (mode) => {
+    setBreakTool(mode);
+    setDashboardMode("break");
     setAnnoState(0);
     dontChangeEditor = true;
     editorRef.current.setValue(parse2String(currentAnnotationData));
@@ -118,12 +128,22 @@ export default function Dashboard() {
 
 
 
-  const mouseDownSVG  = (e) => {
+  const getSvgPoint = (event) => {
+    const svg = event.currentTarget;
+    const pt = svg.createSVGPoint();
+    pt.x = event.clientX;
+    pt.y = event.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  };
+
+  const mouseDownSVG  = (event) => {
+    const e = getSvgPoint(event);
     setMouseDown(true);
     setLastMousePos({x: e.x, y: e.y});
   }
 
-  const mouseUpSVG = (e) => {
+  const mouseUpSVG = (event) => {
+    const e = getSvgPoint(event);
 
     function transform(c){return {x : Math.floor(c.x/(config.dx)), y : Math.floor(c.y/(config.dy + config.offsetY))};}
     try{
@@ -157,6 +177,17 @@ export default function Dashboard() {
           //console.log("New annotation: ", newAnnotation);
         }
       }
+      else if(dashboardMode === "break"){
+        if(breakTool !== "add"){
+          return;
+        }
+
+        const signalIndex = Math.max(0, clickNow.y);
+        const timeStamp = Math.max(0, Math.round((e.x / config.dx) * 10) / 10);
+        const newBreak = { signalIndex, timeStamp, global: false };
+        const updatedAnnotation = [...currentAnnotationData, newBreak];
+        editorRef.current.setValue(parse2String(updatedAnnotation));
+      }
       //console.log(waveFormButtonSelection);
     }catch(err)
     {
@@ -167,7 +198,7 @@ export default function Dashboard() {
   
   const [currentSignalData, setCurrentSignalData] = useState([]);
   const [currentAnnotationData, setCurrentAnnotationData] = useState([]);
-  const [dashboardMode, setDashboardMode] = useState("signal"); //signal or annotation
+  const [dashboardMode, setDashboardMode] = useState("signal"); //signal | annotation | break
 
   const [editorHeight, setEditorHeight] = useState(240);
   const isResizing = useRef(false);
@@ -184,7 +215,7 @@ export default function Dashboard() {
         checkError(signalList);
         setCurrentSignalData(signalList);
       }
-      else if(dashboardMode === "annotation"){
+      else if(dashboardMode === "annotation" || dashboardMode === "break"){
         const annotationList = parse2List(value);
         setCurrentAnnotationData(annotationList);
       }
@@ -248,10 +279,11 @@ export default function Dashboard() {
   //Navbar handlers
   const handleNewFile = () =>
   {
-    setAllTabsData([{name : 'New Tab', waveform : []}]);
+    setAllTabsData([{name : 'New Tab', waveform : [], annotation : []}]);
     setSelectedTabIndex(0);
     editorRef.current.setValue("");
     setCurrentSignalData([]);
+    setCurrentAnnotationData([]);
   }
   const handleOpenFile = () =>
   {
@@ -260,10 +292,11 @@ export default function Dashboard() {
 
     try{
       openJSONFile().then((data) => {
-        setAllTabsData(data);
-        setCurrentAnnotationData(data[0].annotation || []);
-        editorRef.current.setValue(parse2String(data[0].waveform));
-        setCurrentSignalData(data[0].waveform);
+        const normalized = data.map((tab) => ({ ...tab, annotation: tab.annotation || [] }));
+        setAllTabsData(normalized);
+        setCurrentAnnotationData(normalized[0].annotation || []);
+        editorRef.current.setValue(parse2String(normalized[0].waveform));
+        setCurrentSignalData(normalized[0].waveform);
       });
     }catch(err)
     {alert(err);}
@@ -352,7 +385,29 @@ export default function Dashboard() {
   const handleAnnotationUpdate = (idx, newAnnotation) => {
     setCurrentAnnotationData((prev) => {
       const next = prev.map((ann, i) => (i === idx ? newAnnotation : ann));
-      if (dashboardMode === "annotation") {
+      if (dashboardMode === "annotation" || dashboardMode === "break") {
+        dontChangeEditor = true;
+        editorRef.current.setValue(parse2String(next));
+      }
+      return next;
+    });
+  };
+
+  const handleBreakUpdate = (idx, newBreak) => {
+    setCurrentAnnotationData((prev) => {
+      const next = prev.map((item, i) => (i === idx ? newBreak : item));
+      if (dashboardMode === "annotation" || dashboardMode === "break") {
+        dontChangeEditor = true;
+        editorRef.current.setValue(parse2String(next));
+      }
+      return next;
+    });
+  };
+
+  const handleBreakDelete = (idx) => {
+    setCurrentAnnotationData((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      if (dashboardMode === "annotation" || dashboardMode === "break") {
         dontChangeEditor = true;
         editorRef.current.setValue(parse2String(next));
       }
@@ -452,6 +507,7 @@ export default function Dashboard() {
         <WaveformTools
           setParentTool={handleWaveFormButton}
           onAnnotationToolChange={handleAnnotationToolChange}
+          onBreakToolChange={handleBreakToolChange}
         />
 
           {/* Bottom buttons (Editor-related) */}
@@ -498,7 +554,10 @@ export default function Dashboard() {
               mouseDownSVG={mouseDownSVG}
               mouseUpSVG={mouseUpSVG}
               annotationMode={annotationTool}
+              breakMode={breakTool}
               onAnnotationUpdate={handleAnnotationUpdate}
+              onBreakUpdate={handleBreakUpdate}
+              onBreakDelete={handleBreakDelete}
             />
           </Box>
           {/* Drag handle */}

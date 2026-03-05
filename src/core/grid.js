@@ -118,7 +118,7 @@ export const Cursor = React.memo(function Cursor({mouseX, mouseY, start, end, fo
       state={state}
     />
   );
-  else if (mode === "signal")return (
+  else return (
       <Pointer mouseX={mouseX} height={height}/>
   );
 });

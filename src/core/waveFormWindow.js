@@ -29,7 +29,10 @@ export default function WaveFormWindow({
     mouseDownSVG,
     mouseUpSVG,
     annotationMode,
+    breakMode,
     onAnnotationUpdate,
+    onBreakUpdate,
+    onBreakDelete,
 })
 {
     //console.log("Waveform window");
@@ -188,7 +191,10 @@ export default function WaveFormWindow({
                 end={end}
                 foot={foot}
                 annotationMode={annotationMode}
+                breakMode={breakMode}
                 onAnnotationUpdate={onAnnotationUpdate}
+                onBreakUpdate={onBreakUpdate}
+                onBreakDelete={onBreakDelete}
             />
             </Box>
         </Box>
