@@ -4,8 +4,10 @@ import { forwardRef, useState } from "react";
 import React, { useMemo } from "react";
 import {Grid, Cursor} from "./grid";
 import TimingAnnotations from "./annotation";
-import BreakNotations from "./breakNotation";
-import { useAppConfig } from "../core/config";
+import CurvedAnnotations from "./curvedAnnotation";
+import BreakNotations, { BreakMaskLayer } from "./breakNotation";
+import { useAppConfig, isDarkMode } from "../core/config";
+import { getCanvasFill } from "./waveGeometry";
 
 
 const div = 4;
@@ -14,8 +16,9 @@ const div = 4;
 const patternId = "my-hatch-pattern";
 const busColorScheme = {
 
-  '=' : 'white',
-  'a' : 'grey',
+  // Hex only: darkenHexColor cannot read CSS colour names.
+  '=' : '#ffffff',
+  'a' : '#808080',
   'b' : '#9fd5f5',
   'c' : '#a2fad1',
   'o' : '#ffca7a',
@@ -48,12 +51,19 @@ const SignalWindow = forwardRef(({
   end,
   foot,
   annotationMode,
+  curveP1,
+  curveP2,
   breakMode,
   onAnnotationUpdate,
+  onAnnotationDelete,
   onBreakUpdate,
   onBreakDelete,
 }, ref) => 
 {
+  const { config } = useAppConfig();
+  const darkMode = isDarkMode(config);
+  const canvasFill = getCanvasFill(darkMode);
+
   const [mouseX, setMouseX] = useState(null);
   const [mouseY, setMouseY] = useState(null);
 
@@ -69,16 +79,32 @@ const SignalWindow = forwardRef(({
     setMouseY(cursorPoint.y);
   };
 
-  const annotationItems = useMemo(
+  const linearAnnotations = useMemo(
     () =>
       (anno || [])
         .map((item, sourceIndex) => ({ ...item, sourceIndex }))
         .filter(
           (item) =>
+            item.type !== "curved" &&
             typeof item.start === "number" &&
             typeof item.end === "number" &&
             typeof item.head === "number" &&
             typeof item.foot === "number"
+        ),
+    [anno]
+  );
+
+  const curvedAnnotations = useMemo(
+    () =>
+      (anno || [])
+        .map((item, sourceIndex) => ({ ...item, sourceIndex }))
+        .filter(
+          (item) =>
+            item.type === "curved" &&
+            typeof item.x1 === "number" &&
+            typeof item.y1 === "number" &&
+            typeof item.x2 === "number" &&
+            typeof item.y2 === "number"
         ),
     [anno]
   );
@@ -105,7 +131,7 @@ const SignalWindow = forwardRef(({
       width={width} 
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      style={{ display: "block", backgroundColor: useAppConfig().config.darkMode ? '#11111100' : '#fff' }}
+      style={{ display: "block", backgroundColor: canvasFill }}
       onMouseMove={handleMouseMove}
       onMouseDown={mouseDownSVG}
       onMouseUp={mouseUpSVG}
@@ -124,20 +150,34 @@ const SignalWindow = forwardRef(({
       start={start}
       end={end}
       foot={foot}
+      annotationMode={annotationMode}
+      curveP1={curveP1}
+      curveP2={curveP2}
     />
     <AllSignals
       signals={signals}
-      viewMode={useAppConfig().config.darkMode}
+      viewMode={darkMode}
+    />
+    <BreakMaskLayer
+      breaks={breakItems}
+      signalCount={signals.length}
+      fill={canvasFill}
     />
     <TimingAnnotations
-      annotations={annotationItems}
+      annotations={linearAnnotations}
       mode={mode === "annotation" && annotationMode === "edit"}
-      state={state}
       onUpdate={onAnnotationUpdate}
+    />
+    <CurvedAnnotations
+      annotations={curvedAnnotations}
+      mode={mode === "annotation" && annotationMode === "edit"}
+      onUpdate={onAnnotationUpdate}
+      onDelete={onAnnotationDelete}
     />
     <BreakNotations
       breaks={breakItems}
       signalCount={signals.length}
+      darkMode={darkMode}
       mode={mode === "break" && breakMode === "edit"}
       onUpdate={onBreakUpdate}
       onDelete={onBreakDelete}
@@ -164,10 +204,12 @@ function AllSignals({
           return null;
         }
         
+        // A trace is a thin stroke, so it takes the colour at full strength
+        // rather than the washed out fill that bus bodies use.
         const color =
           Object.keys(signal).includes("color") &&
           Object.keys(busColorScheme).includes(signal.color)
-            ? darkenHexColor(busColorScheme[signal.color], 20)
+            ? busColorScheme[signal.color]
             : viewMode
             ? "white"
             : "black";
@@ -213,7 +255,7 @@ function Signal({
     //console.log("Using memo");
     const parsedInt = parseFloat(Rawscale);
     const scale = isNaN(parsedInt) ? 1 : parsedInt;
-    const waveY = idx * (dy + 10) + 15;
+    const waveY = idx * (dy + offsetY) + 15;
 
     let points = ["", ""];
     let texts = [];
@@ -322,12 +364,22 @@ function Signal({
           continue;
         }
       }
-        
-      
-      // 
-    
-    console.log("Rendering all signal");
-    console.log(texts);
+
+    // A bus is only emitted once the state that follows it closes the shape,
+    // so a wave that ends on a bus leaves the last one unfilled and unlabelled
+    // unless it is flushed here.
+    const trailingShape = getShapeSegmentForce();
+    if (trailingShape) {
+      busShapes.push(trailingShape);
+      busColors.push(busColorScheme[lastValid]);
+    }
+
+    const trailingText = getTextSegmentForce();
+    if (trailingText) {
+      if (Array.isArray(trailingText)) texts.push(...trailingText);
+      else texts.push(trailingText);
+    }
+
     return { points, busShapes, busColors, texts };
 
   }, [
@@ -336,6 +388,7 @@ function Signal({
     idx,
     UnscaledDx,
     dy,
+    offsetY,
     Rawscale,
     phase,
     lineWidth
@@ -441,13 +494,19 @@ function getComplement(bit)
 function darkenHexColor(hex, percent) {
 
     try{
+      if(typeof hex !== "string") return undefined;
       if(hex.startsWith("url(")) return hex; //pattern fill, do not darken
-      hex = hex.replace(/^#/, '');
+
+      let digits = hex.replace(/^#/, '');
+      if(digits.length === 3) digits = digits.replace(/./g, (c) => c + c);
+      // A colour we cannot read as hex would darken to a stray black, so hand
+      // it back untouched instead.
+      if(!/^[0-9a-f]{6}$/i.test(digits)) return hex;
 
       // Convert hex to RGB
-      let r = parseInt(hex.substring(0, 2), 16);
-      let g = parseInt(hex.substring(2, 4), 16);
-      let b = parseInt(hex.substring(4, 6), 16);
+      let r = parseInt(digits.substring(0, 2), 16);
+      let g = parseInt(digits.substring(2, 4), 16);
+      let b = parseInt(digits.substring(4, 6), 16);
 
       // Calculate darkening amount
       const amount = Math.round(2.55 * percent); // percentage of 255

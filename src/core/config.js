@@ -13,6 +13,7 @@ export const DEFAULT_CONFIG = {
   //Name div parameter
   indentPerLevel: 30,
   rulerHeight: 20,
+  rulerLabelInterval: 5,
   charWidth: 6.5,
   nameStart: 5,
 
@@ -42,4 +43,8 @@ export function useAppConfig() {
     throw new Error("useAppConfig must be used inside AppConfigProvider")
   }
   return ctx
+}
+
+export function isDarkMode(config) {
+  return config?.darkMode ?? true
 }

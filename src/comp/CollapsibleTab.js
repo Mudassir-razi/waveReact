@@ -82,7 +82,7 @@ const CollapsibleRightTab = ({ viewMode }) => {
             In the Annotation code, using '_' will give you subscripts. t_RCD = t<sub>RCD</sub>
           </li>
           <li>
-            Global break: Use {<code>name : "/*", wave : "..|.."</code>} in wave property to create a global break in the waveform.
+            Global break: add a break object with <code>global: true</code> in the annotation editor, or hold Shift while placing a break in Break → add mode. Example: <code>{`{ signalIndex: 0, timeStamp: 8, global: true }`}</code>
           </li>
         </ul>
       </div>

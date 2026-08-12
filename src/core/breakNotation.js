@@ -1,9 +1,106 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useAppConfig } from "../core/config";
+import { getSignalBreakBounds } from "./waveGeometry";
+
+const GAP = 5;
+const BULGE = 2.8;
+
+function buildBreakTargets(breaks, signalCount, dx, dy, offsetY) {
+  return breaks.flatMap((item, idx) => {
+    const x = item.timeStamp * dx;
+    const targets = item.global
+      ? Array.from({ length: Math.max(0, signalCount) }, (_, i) => i)
+      : [item.signalIndex];
+
+    return targets.map((targetSignalIdx) => ({
+      key: `${idx}-${targetSignalIdx}`,
+      idx,
+      x,
+      targetSignalIdx,
+      bounds: getSignalBreakBounds(targetSignalIdx, dy, offsetY),
+    }));
+  });
+}
+
+export function BreakMaskLayer({ breaks = [], signalCount = 0, fill }) {
+  const { config } = useAppConfig();
+  const dx = config.dx;
+  const dy = config.dy;
+  const offsetY = config.offsetY;
+
+  const breakTargets = buildBreakTargets(breaks, signalCount, dx, dy, offsetY);
+
+  return (
+    <g id="break-masks">
+      {breakTargets.map(({ key, x, bounds }) => {
+        const height = bounds.bottom - bounds.top;
+        const maskHalfWidth = GAP / 2 + BULGE + 3;
+
+        return (
+          <rect
+            key={`mask-${key}`}
+            x={x - maskHalfWidth}
+            y={bounds.top}
+            width={maskHalfWidth * 2}
+            height={height}
+            fill={fill}
+          />
+        );
+      })}
+    </g>
+  );
+}
+
+function BreakCurves({ x, top, bottom, gap, stroke, strokeWidth, onSelect }) {
+  const height = bottom - top;
+  const halfGap = gap / 2;
+  const bulge = Math.min(2.8, height * 0.12);
+
+  const sCurvePath = (lineX) => {
+    const mid = top + height / 2;
+    return [
+      `M ${lineX} ${top}`,
+      `C ${lineX + bulge} ${top + height * 0.22}, ${lineX + bulge} ${mid - height * 0.08}, ${lineX} ${mid}`,
+      `C ${lineX - bulge} ${mid + height * 0.08}, ${lineX - bulge} ${bottom - height * 0.22}, ${lineX} ${bottom}`,
+    ].join(" ");
+  };
+
+  const leftX = x - halfGap - 1.5;
+  const rightX = x + halfGap + 1.5;
+
+  return (
+    <g onClick={onSelect}>
+      <rect
+        x={x - 10}
+        y={top - 4}
+        width={20}
+        height={height + 8}
+        fill="transparent"
+      />
+      <path
+        d={sCurvePath(leftX)}
+        fill="none"
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d={sCurvePath(rightX)}
+        fill="none"
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </g>
+  );
+}
 
 export default function BreakNotations({
   breaks = [],
   signalCount = 0,
+  darkMode = true,
   mode,
   onUpdate,
   onDelete,
@@ -11,7 +108,6 @@ export default function BreakNotations({
   const [selected, setSelected] = useState(null);
   const groupRef = useRef(null);
   const { config } = useAppConfig();
-  const darkMode = config.darkMode ?? true;
 
   const dx = config.dx;
   const dy = config.dy;
@@ -78,7 +174,7 @@ export default function BreakNotations({
     if (!onUpdate) return;
 
     const dir = evt.key === "ArrowLeft" ? -1 : 1;
-    const step = 0.1;
+    const step = evt.shiftKey ? 0.1 : 1;
     const nextTimeStamp = Math.max(
       0,
       Math.round((current.timeStamp + dir * step) * 10) / 10
@@ -90,9 +186,11 @@ export default function BreakNotations({
     onUpdate(sourceIndex, updated);
   };
 
+  const breakTargets = buildBreakTargets(breaks, signalCount, dx, dy, offsetY);
+
   return (
     <g
-      id="break-notations"
+      id="break-glyphs"
       ref={groupRef}
       tabIndex={0}
       focusable="true"
@@ -100,60 +198,33 @@ export default function BreakNotations({
       onKeyDown={handleKeyDown}
       onClick={handleBackgroundClick}
     >
-      {breaks.map((item, idx) => {
-        const x = item.timeStamp * dx;
-        const targets = item.global
-          ? Array.from({ length: Math.max(0, signalCount) }, (_, i) => i)
-          : [item.signalIndex];
+      {breakTargets.map(({ key, idx, x, bounds }) => {
+        const isSelected = selected === idx;
+        const stroke = isSelected
+          ? darkMode
+            ? "#22d3ee"
+            : "#0284c7"
+          : darkMode
+          ? "#e5e7eb"
+          : "#1f2937";
+        const strokeWidth = isSelected ? 2.2 : 1.8;
 
-        return targets.map((targetSignalIdx) => {
-          const yCenter = targetSignalIdx * (dy + offsetY) + dy / 2 - 10;
-          const lineHalf = Math.max(6, dy / 2);
-          const gap = 3;
-          const isSelected = selected === idx;
-          const stroke = isSelected
-            ? darkMode
-              ? "#22d3ee"
-              : "#0284c7"
-            : darkMode
-            ? "#e5e7eb"
-            : "#1f2937";
-
-          return (
-            <g
-              key={`${idx}-${targetSignalIdx}`}
-              transform={`rotate(15 ${x} ${yCenter})`}
-              style={{ cursor: mode ? "pointer" : "default" }}
-            >
-              <rect
-                x={x - 8}
-                y={yCenter - lineHalf - 4}
-                width={16}
-                height={lineHalf * 2 + 8}
-                fill="transparent"
-                onClick={(evt) => handleSelect(idx, evt)}
-              />
-              <line
-                x1={x - gap / 2}
-                y1={yCenter - lineHalf}
-                x2={x - gap / 2}
-                y2={yCenter + lineHalf}
-                stroke={stroke}
-                strokeWidth={isSelected ? 2.2 : 1.6}
-                onClick={(evt) => handleSelect(idx, evt)}
-              />
-              <line
-                x1={x + gap / 2}
-                y1={yCenter - lineHalf}
-                x2={x + gap / 2}
-                y2={yCenter + lineHalf}
-                stroke={stroke}
-                strokeWidth={isSelected ? 2.2 : 1.6}
-                onClick={(evt) => handleSelect(idx, evt)}
-              />
-            </g>
-          );
-        });
+        return (
+          <g
+            key={`glyph-${key}`}
+            style={{ cursor: mode ? "pointer" : "default" }}
+          >
+            <BreakCurves
+              x={x}
+              top={bounds.top}
+              bottom={bounds.bottom}
+              gap={GAP}
+              stroke={stroke}
+              strokeWidth={strokeWidth}
+              onSelect={(evt) => handleSelect(idx, evt)}
+            />
+          </g>
+        );
       })}
     </g>
   );

@@ -6,11 +6,11 @@ import UserGuide from './comp/UserGuide';
 import reportWebVitals from './reportWebVitals';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { AppConfigProvider, useAppConfig } from "./core/config";
+import { AppConfigProvider, useAppConfig, isDarkMode } from "./core/config";
 
 function ThemedRoot() {
   const { config } = useAppConfig();
-  const darkMode = config.darkMode ?? true;
+  const darkMode = isDarkMode(config);
   const isUserGuide = typeof window !== "undefined" && window.location.search.includes("userguide");
 
   const theme = React.useMemo(() => createTheme({

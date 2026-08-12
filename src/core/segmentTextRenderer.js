@@ -1,7 +1,6 @@
 import React from 'react';
 
 let dx = 0;
-let dy = 0;
 let offsetY = 0;
 let scale = 1;
 
@@ -21,13 +20,14 @@ let data = [];
 export function initTextRenderer(dx_, dy_, offsetY_, scale_, data_)
 {
     dx = dx_;
-    dy = dy_;
     busLength = 0;
     offsetY = offsetY_;
+    // Every renderer state is reset here so nothing carries over from the
+    // signal drawn before this one.
+    textOffset = 0;
     index = 0;
     scale = scale_;
     data = data_.split(',');
-    console.log(data);
 }
 
 /**

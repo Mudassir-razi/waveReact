@@ -1,4 +1,5 @@
 const KEYWORDS = ["name", "data", "wave", "width", "scale", "color", "phase"];
+const TEXT_KEYWORDS = ["name", "data", "wave", "color"];
 
 /**
  * Parses a JSON string into an object or list of objects.
@@ -9,8 +10,11 @@ const KEYWORDS = ["name", "data", "wave", "width", "scale", "color", "phase"];
  */
 export function parse2List(str) {
   try {
-    // Use `eval` in a safe wrapper (assumes the string is trusted!)
+    // The editor accepts relaxed JSON (unquoted keys, trailing commas), which
+    // JSON.parse rejects, so the buffer is evaluated as an expression. The only
+    // author of this text is the person already running the page.
     const wrapped = `(${str})`; // wrap in () to treat as expression
+    // eslint-disable-next-line no-eval
     const result = eval(wrapped);
 
     if (!Array.isArray(result)) {
@@ -160,7 +164,10 @@ export function flattenSignals(tree) {
       } else if (typeof node === "object" && node !== null) {
         if (Object.keys(node).length === 0) {
           result.push({}); // preserve empty objects
-        } else if ('name' in node && 'wave' in node) {
+        } else if ('name' in node) {
+          // A row with a name but no wave still occupies a line. Dropping it
+          // here would shift every name below it onto the wrong waveform,
+          // because the name column counts it either way.
           result.push(node);
         }
         // else: ignore partial/invalid objects
@@ -179,7 +186,8 @@ export function checkError(input, path = "root") {
     throw new Error(`${path}: Input must be a list`);
   }
 
-  if(input.length <= 0)throw new Error("Input empty");
+  // An empty list is a deliberate state: clearing the editor clears the
+  // diagram rather than leaving the previous one on screen.
 
   input.forEach((item, index) => {
     const currentPath = `${path}[${index}]`;
@@ -196,7 +204,7 @@ export function checkError(input, path = "root") {
 
     // Rule 2: Element types
     if (Array.isArray(item)) {
-      checkError(item, KEYWORDS, currentPath);
+      checkError(item, currentPath);
       return;
     }
 
@@ -208,7 +216,26 @@ export function checkError(input, path = "root") {
             `${currentPath}: Invalid key "${key}". Allowed keys: ${KEYWORDS.join(", ")}`
           );
         }
+
+        // Rule 5: the renderer reads these as text and cannot recover from
+        // another type, so reject it here rather than fail mid-draw. Bus
+        // labels may also be written as a list, as the user guide shows.
+        const value = item[key];
+        const listOfLabels =
+          key === "data" && Array.isArray(value) && value.every((v) => typeof v === "string");
+        if (TEXT_KEYWORDS.includes(key) && typeof value !== "string" && !listOfLabels) {
+          throw new Error(
+            `${currentPath}: "${key}" must be quoted text, got ${typeof value}`
+          );
+        }
       });
+
+      // Rule 6: every signal needs a name to label its row. An empty object is
+      // not a signal, it is a deliberate blank line used to space rows apart.
+      const isBlankLine = Object.keys(item).length === 0;
+      if (!isBlankLine && typeof item.name !== "string") {
+        throw new Error(`${currentPath}: Missing "name"`);
+      }
       return;
     }
 

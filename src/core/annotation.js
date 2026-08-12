@@ -1,37 +1,71 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppConfig } from "../core/config";
-/**
- * TimingAnnotations
- * 
- * Renders editable timing diagram annotations as SVG <g> elements.
- * Double-click on text to edit inline.
- * 
- * @param {Array} annotations - Array of {text, start, end, head, foot}
- * @param {Function} onUpdate - Callback(index, newAnnotation) when annotation changes
- */
+
+function AnnotationLabel({ text, x, y, fill, fontSize, subFontSize, onDoubleClick }) {
+  const underscore = text.indexOf("_");
+
+  if (underscore === -1) {
+    return (
+      <text
+        x={x}
+        y={y}
+        textAnchor="middle"
+        fontSize={fontSize}
+        fill={fill}
+        fontFamily="monospace"
+        style={{ cursor: 'pointer', userSelect: 'none' }}
+        onDoubleClick={onDoubleClick}
+      >
+        {text}
+      </text>
+    );
+  }
+
+  const base = text.slice(0, underscore);
+  const subscript = text.slice(underscore + 1);
+
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor="middle"
+      fontSize={fontSize}
+      fill={fill}
+      fontFamily="monospace"
+      style={{ cursor: 'pointer', userSelect: 'none' }}
+      onDoubleClick={onDoubleClick}
+    >
+      <tspan>{base}</tspan>
+      <tspan fontSize={subFontSize} baselineShift="sub">{subscript}</tspan>
+    </text>
+  );
+}
+
 export default function TimingAnnotations({
   mode,
   annotations = [],
   onUpdate,
-  colors = {},
 }) {
   const [editingIdx, setEditingIdx] = useState(null);
   const [editText, setEditText] = useState('');
   const inputRef = useRef(null);
   const groupRef = useRef(null);
-  const [selected, setSelected] = useState(null); // { index, part: 'left'|'right'|'bar' }
+  const [selected, setSelected] = useState(null);
 
   const { config } = useAppConfig();
   const dx = config.dx;
+  const darkMode = config.darkMode ?? true;
 
-  const {
-    strokeColor = "#888",
-    selectedStrokeColor = "#22d3ee",
-    textColor = "#bbb",
-    selectedTextColor = "#e5e7eb",
-  } = colors;
+  const strokeColor = darkMode ? "#6b9fd4" : "#2563eb";
+  const selectedStrokeColor = darkMode ? "#38bdf8" : "#0284c7";
+  const textColor = darkMode ? "#8ec5f0" : "#1e40af";
+  const selectedTextColor = darkMode ? "#bae6fd" : "#1d4ed8";
+  const inputBg = darkMode ? "#0f172a" : "#f8fafc";
+  const inputText = darkMode ? "#e0f2fe" : "#1e3a8a";
+  const inputBorder = darkMode ? "#38bdf8" : "#2563eb";
+  const labelFontSize = 13;
+  const subFontSize = 10;
 
-  // Focus the input when editing starts
   useEffect(() => {
     if (editingIdx !== null && inputRef.current) {
       inputRef.current.focus();
@@ -39,12 +73,10 @@ export default function TimingAnnotations({
     }
   }, [editingIdx]);
 
-  // Clear selection when annotations list changes drastically
   useEffect(() => {
     setSelected(null);
   }, [annotations.length]);
 
-  // Any mode switch out of editable annotation mode should clear selection/edit state.
   useEffect(() => {
     if (!mode) {
       setSelected(null);
@@ -53,7 +85,6 @@ export default function TimingAnnotations({
     }
   }, [mode]);
 
-  // Clicking anywhere outside annotation group deselects current selection.
   useEffect(() => {
     const handleDocumentPointerDown = (evt) => {
       if (!groupRef.current) return;
@@ -106,8 +137,6 @@ export default function TimingAnnotations({
   const handleGroupKeyDown = (e) => {
     if (!mode) return;
     if (!selected || !onUpdate) return;
-
-    // Do not move while editing text
     if (editingIdx !== null) return;
 
     const { index, part } = selected;
@@ -118,8 +147,11 @@ export default function TimingAnnotations({
     let updated = { ...baseAnnotation };
     let changed = false;
 
-    const dxStep = 1;
+    const dxStep = e.shiftKey ? 0.1 : 1;
     const dyStep = 5;
+
+    const stepTime = (value, dir) =>
+      Math.max(0, Math.round((value + dir * dxStep) * 10) / 10);
 
     if (e.key === "Escape") {
       setSelected(null);
@@ -131,24 +163,23 @@ export default function TimingAnnotations({
       const dir = e.key === "ArrowLeft" ? -1 : 1;
 
       if (part === "left") {
-        const nextStart = Math.max(0, updated.start + dir * dxStep);
+        const nextStart = stepTime(updated.start, dir);
         if (nextStart <= updated.end) {
           updated.start = nextStart;
           changed = true;
         }
       } else if (part === "right") {
-        const nextEnd = Math.max(updated.start, updated.end + dir * dxStep);
+        const nextEnd = Math.max(updated.start, stepTime(updated.end, dir));
         updated.end = nextEnd;
         changed = true;
       } else if (part === "bar") {
         const width = updated.end - updated.start;
-        const nextStart = Math.max(0, updated.start + dir * dxStep);
+        const nextStart = stepTime(updated.start, dir);
         updated.start = nextStart;
         updated.end = nextStart + width;
         changed = true;
       }
     } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-      // Vertical movement moves the whole annotation
       const dir = e.key === "ArrowUp" ? -1 : 1;
       updated.head = updated.head + dir * dyStep;
       updated.foot = updated.foot + dir * dyStep;
@@ -162,12 +193,7 @@ export default function TimingAnnotations({
     }
   };
 
-  const handleBackgroundClick = () => {
-    setSelected(null);
-  };
-
   return (
-    
     <g
       id="timing-annotations"
       ref={groupRef}
@@ -175,12 +201,11 @@ export default function TimingAnnotations({
       focusable="true"
       style={{ outline: "none" }}
       onKeyDown={handleGroupKeyDown}
-      onClick={handleBackgroundClick}
+      onClick={() => setSelected(null)}
     >
       {annotations.map((ann, idx) => {
         const { text, start, end, head, foot } = ann;
 
-        // Compute positions
         const x1 = start * dx;
         const x2 = end * dx;
         const xMid = (x1 + x2) / 2;
@@ -199,7 +224,6 @@ export default function TimingAnnotations({
 
         return (
           <g key={idx} className="annotation">
-            {/* Invisible hitboxes for easier selection */}
             <rect
               x={x1 - hitPad}
               y={yTop - hitPad}
@@ -225,7 +249,6 @@ export default function TimingAnnotations({
               onClick={(e) => handleSelectPart(idx, "bar", e)}
             />
 
-            {/* Vertical ticks at start and end */}
             <line
               x1={x1}
               y1={yHead}
@@ -244,8 +267,6 @@ export default function TimingAnnotations({
               strokeWidth={isRightSelected ? 2 : 1}
               onClick={(e) => handleSelectPart(idx, "right", e)}
             />
-
-            {/* Horizontal span line */}
             <line
               x1={x1}
               y1={yMid}
@@ -256,21 +277,19 @@ export default function TimingAnnotations({
               onClick={(e) => handleSelectPart(idx, "bar", e)}
             />
 
-            {/* Arrowheads (optional — simple chevrons) */}
             <polyline
               points={`${x1 + 4},${yMid - 3} ${x1},${yMid} ${x1 + 4},${yMid + 3}`}
               fill="none"
-              stroke={strokeColor}
+              stroke={isLeftSelected ? selectedStrokeColor : strokeColor}
               strokeWidth={1}
             />
             <polyline
               points={`${x2 - 4},${yMid - 3} ${x2},${yMid} ${x2 - 4},${yMid + 3}`}
               fill="none"
-              stroke={strokeColor}
+              stroke={isRightSelected ? selectedStrokeColor : strokeColor}
               strokeWidth={1}
             />
 
-            {/* Text label — editable on double-click */}
             {isEditing ? (
               <foreignObject x={xMid - 60} y={yMid - 15} width={120} height={30}>
                 <input
@@ -283,11 +302,11 @@ export default function TimingAnnotations({
                   style={{
                     width: '100%',
                     height: '100%',
-                    border: '1px solid #22d3ee',
+                    border: `1px solid ${inputBorder}`,
                     borderRadius: 3,
-                    background: '#0a0d14',
-                    color: '#e2e8f0',
-                    fontSize: 11,
+                    background: inputBg,
+                    color: inputText,
+                    fontSize: labelFontSize,
                     fontFamily: 'monospace',
                     textAlign: 'center',
                     padding: '2px 4px',
@@ -296,18 +315,15 @@ export default function TimingAnnotations({
                 />
               </foreignObject>
             ) : (
-              <text
+              <AnnotationLabel
+                text={text}
                 x={xMid}
                 y={yMid - 5}
-                textAnchor="middle"
-                fontSize={11}
                 fill={isSelected ? selectedTextColor : textColor}
-                fontFamily="monospace"
-                style={{ cursor: 'pointer', userSelect: 'none' }}
+                fontSize={labelFontSize}
+                subFontSize={subFontSize}
                 onDoubleClick={() => handleDoubleClick(idx, text)}
-              >
-                {text}
-              </text>
+              />
             )}
           </g>
         );
@@ -315,4 +331,3 @@ export default function TimingAnnotations({
     </g>
   );
 }
-

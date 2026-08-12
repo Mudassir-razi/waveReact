@@ -41,7 +41,8 @@ export default function NavBar({ title, items = [] }) {
         {items.map((item, index) => (
           <MenuItem
             key={index}
-            onClick={() => handleItemClick(item.onClick)}
+            disabled={item.disabled}
+            onClick={() => !item.disabled && handleItemClick(item.onClick)}
           >
             {item.label}
           </MenuItem>

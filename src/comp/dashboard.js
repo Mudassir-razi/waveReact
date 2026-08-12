@@ -6,11 +6,14 @@ import { parse2List, parse2String, checkError } from "../core/parser";
 import { manageTabs } from "../core/tabsManager";
 import { modifyOnMouseEvent } from "../core/signalLogic";
 import WaveformTools from "./waveformTools";
-import { getSVG } from "../core/waveFormWindow";
+import { getSVG, getSVGString } from "../core/waveFormWindow";
+import { serializeSvg } from "../core/svgOptimizer";
 import { openJSONFile, saveJSONFile } from "../core/fileSys";
-import { useAppConfig } from "../core/config";
+import { useAppConfig, isDarkMode } from "../core/config";
 import PrefMenu from "./prefMenu";
+import DiagramErrorBoundary from "./DiagramErrorBoundary";
 
+import { createCurveHandles } from "../core/curvedAnnotation";
 import {
   Box,
   Container,
@@ -20,7 +23,9 @@ import {
   Tab,
   Button,
   Divider,
+  IconButton,
 } from "@mui/material";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
 import WaveFormWindow from "../core/waveFormWindow";
 
@@ -39,12 +44,13 @@ let dontChangeEditor = false;
 export default function Dashboard() {
 
   const config = useAppConfig().config;
-  const darkMode = config.darkMode ?? true;
+  const darkMode = isDarkMode(config);
 
   //Tab stuff..............................................................................................................
   //Tabs handler starts 
   const [allTabsData, setAllTabsData] = useState([{name : 'New Tab', waveform : [], annotation : []}]);
   const [selectedTabIndex, setSelectedTabIndex] = useState(0);
+  const [tabDeleteUndoStack, setTabDeleteUndoStack] = useState([]);
 
   //Tab name editers 
   const [editingIndex, setEditingIndex] = useState(null);
@@ -62,15 +68,31 @@ export default function Dashboard() {
     setEditingIndex(null);
   };
 
+  // The editor holds whichever list the active tool edits, so a tab has to be
+  // loaded through here: handing annotation mode a waveform makes the next
+  // keystroke parse it and overwrite that tab's annotations.
+  const loadTabIntoEditor = (tab) => {
+    const waveform = tab?.waveform || [];
+    const annotation = tab?.annotation || [];
+
+    setCurrentSignalData(waveform);
+    setCurrentAnnotationData(annotation);
+
+    if (editorRef.current) {
+      dontChangeEditor = true;
+      editorRef.current.setValue(
+        parse2String(dashboardMode === "signal" ? waveform : annotation)
+      );
+    }
+  };
+
   //Changing tab on Click 
   const handleTabChange = (event, newValue) => {
     //first, store the last tab's data
-    setAllTabsData(manageTabs(allTabsData, selectedTabIndex, 'mod', currentSignalData, currentAnnotationData));
+    const savedTabs = manageTabs(allTabsData, selectedTabIndex, 'mod', currentSignalData, currentAnnotationData);
+    setAllTabsData(savedTabs);
     setSelectedTabIndex(newValue);
-    //console.log(newValue);
-    editorRef.current.setValue(parse2String(allTabsData[newValue].waveform));
-    setCurrentSignalData(allTabsData[newValue].waveform);
-    setCurrentAnnotationData(allTabsData[newValue].annotation || []);
+    loadTabIntoEditor(savedTabs[newValue]);
   }
 
   //Tab Buttons handlers
@@ -78,18 +100,43 @@ export default function Dashboard() {
   const handleTabMinus = () =>{
     const newSelectedTabIndex = selectedTabIndex - 1;
     if(newSelectedTabIndex < 0){ alert("Last tab is sacred");return null;}
-    setAllTabsData(manageTabs(allTabsData, selectedTabIndex, 'sub'));
+
+    const tabsWithCurrent = manageTabs(allTabsData, selectedTabIndex, 'mod', currentSignalData, currentAnnotationData);
+    const deletedTab = structuredClone(tabsWithCurrent[selectedTabIndex]);
+
+    setTabDeleteUndoStack((prev) => [
+      ...prev,
+      { tab: deletedTab, index: selectedTabIndex },
+    ]);
+
+    const newTabs = manageTabs(tabsWithCurrent, selectedTabIndex, 'sub');
+    setAllTabsData(newTabs);
     setSelectedTabIndex(newSelectedTabIndex);
-    editorRef.current.setValue(parse2String(allTabsData[newSelectedTabIndex].waveform));
-    setCurrentSignalData(allTabsData[newSelectedTabIndex].waveform);
-    setCurrentAnnotationData(allTabsData[newSelectedTabIndex].annotation || []);
+    loadTabIntoEditor(newTabs[newSelectedTabIndex]);
   }
+
+  const handleUndoTabDelete = () => {
+    if (tabDeleteUndoStack.length === 0) {
+      alert("Nothing to undo.");
+      return;
+    }
+
+    const tabsWithCurrent = manageTabs(allTabsData, selectedTabIndex, 'mod', currentSignalData, currentAnnotationData);
+    const { tab, index } = tabDeleteUndoStack[tabDeleteUndoStack.length - 1];
+    const restoredTabs = [...tabsWithCurrent];
+    restoredTabs.splice(index, 0, structuredClone(tab));
+
+    setAllTabsData(restoredTabs);
+    setSelectedTabIndex(index);
+    loadTabIntoEditor(restoredTabs[index]);
+    setTabDeleteUndoStack((prev) => prev.slice(0, -1));
+  };
   //Tabs handler ends..........................................................................................................
 
 
   //Waveform / annotation tool handlers
   const [waveFormButtonSelection, setWaveFormButtonSelection] = useState("1");
-  const [annotationTool, setAnnotationTool] = useState("add"); // 'add' | 'edit'
+  const [annotationTool, setAnnotationTool] = useState("add"); // 'add' | 'curve' | 'edit'
   const [breakTool, setBreakTool] = useState("add"); // 'add' | 'edit'
 
   const handleWaveFormButton = (event, newValue) => {
@@ -117,7 +164,7 @@ export default function Dashboard() {
 
 
   //Mouse movement control for SVG
-  const [mouseDown, setMouseDown] = useState(false);
+  const [, setMouseDown] = useState(false);
   const [annoState, setAnnoState] = useState(0);
   const [lastMousePos, setLastMousePos] = useState({x: 0, y: 0});
 
@@ -125,6 +172,8 @@ export default function Dashboard() {
   const [annoStart, setAnnoStart] = useState(0);
   const [annoEnd, setAnnoEnd] = useState(0);
   const [annoFoot, setAnnoFoot] = useState(0);
+  const [curveP1, setCurveP1] = useState(null);
+  const [curveP2, setCurveP2] = useState(null);
 
 
 
@@ -151,14 +200,51 @@ export default function Dashboard() {
       const clickLast = transform(lastMousePos);
       if(dashboardMode === "signal"){
         const updatedSignal = modifyOnMouseEvent(currentSignalData, clickNow.x, clickNow.y, clickLast.x, clickLast.y, waveFormButtonSelection);
-        console.log(updatedSignal);
         editorRef.current.setValue(parse2String(updatedSignal));
       }
       else if(dashboardMode === "annotation"){
+        if(annotationTool === "curve"){
+          if(annoState === 0){
+            setCurveP1({ x: e.x, y: e.y });
+            setCurveP2(null);
+            setAnnoState(1);
+          } else if(annoState === 1 && curveP1){
+            setCurveP2({ x: e.x, y: e.y });
+            setAnnoState(2);
+          } else if(annoState === 2 && curveP1 && curveP2){
+            setAnnoState(0);
+            const anchorX = e.x;
+            const anchorY = e.y;
+            const handles = createCurveHandles(
+              curveP1.x,
+              curveP1.y,
+              curveP2.x,
+              curveP2.y,
+              anchorX,
+              anchorY
+            );
+            const newAnnotation = {
+              type: "curved",
+              text: "new annotation",
+              x1: curveP1.x,
+              y1: curveP1.y,
+              x2: curveP2.x,
+              y2: curveP2.y,
+              cx: anchorX,
+              cy: anchorY,
+              ...handles,
+            };
+            setCurveP1(null);
+            setCurveP2(null);
+            const updatedAnnotation = [...currentAnnotationData, newAnnotation];
+            editorRef.current.setValue(parse2String(updatedAnnotation));
+          }
+          return;
+        }
+
         if(annotationTool !== "add"){
           return;
         }
-        //Annotation modification logic will be here
         if(annoState === 0){
           setAnnoStart(clickNow.x);
           setAnnoFoot(e.y);
@@ -167,14 +253,18 @@ export default function Dashboard() {
         else if(annoState === 1){
           setAnnoEnd(clickNow.x);
           setAnnoState(2);
-          //console.log("New annotation: ", {text : "new annotation", start : annoStart, end : clickNow.x, head : annoHead, foot : clickNow.y});
         }
         else if(annoState === 2){
           setAnnoState(0);
-          const newAnnotation = {text : "new annotation", start : annoStart, end : annoEnd, head : e.y, foot : annoFoot};
+          const newAnnotation = {
+            text : "new annotation",
+            start : annoStart,
+            end : annoEnd,
+            head : e.y,
+            foot : annoFoot,
+          };
           const updatedAnnotation = [...currentAnnotationData, newAnnotation];
           editorRef.current.setValue(parse2String(updatedAnnotation));
-          //console.log("New annotation: ", newAnnotation);
         }
       }
       else if(dashboardMode === "break"){
@@ -184,7 +274,8 @@ export default function Dashboard() {
 
         const signalIndex = Math.max(0, clickNow.y);
         const timeStamp = Math.max(0, Math.round((e.x / config.dx) * 10) / 10);
-        const newBreak = { signalIndex, timeStamp, global: false };
+        const isGlobal = event.shiftKey;
+        const newBreak = { signalIndex: isGlobal ? 0 : signalIndex, timeStamp, global: isGlobal };
         const updatedAnnotation = [...currentAnnotationData, newBreak];
         editorRef.current.setValue(parse2String(updatedAnnotation));
       }
@@ -200,9 +291,24 @@ export default function Dashboard() {
   const [currentAnnotationData, setCurrentAnnotationData] = useState([]);
   const [dashboardMode, setDashboardMode] = useState("signal"); //signal | annotation | break
 
+  // Cancel in-progress annotation placement with Escape
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key !== "Escape") return;
+      if (dashboardMode !== "annotation") return;
+      if (annotationTool !== "add" && annotationTool !== "curve") return;
+      if (annoState === 0) return;
+      setAnnoState(0);
+      setCurveP1(null);
+      setCurveP2(null);
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [dashboardMode, annotationTool, annoState]);
+
   const [editorHeight, setEditorHeight] = useState(240);
   const isResizing = useRef(false);
-  const svgContainerRef = useRef(null);
 
 
   //Editor logic
@@ -281,6 +387,8 @@ export default function Dashboard() {
   {
     setAllTabsData([{name : 'New Tab', waveform : [], annotation : []}]);
     setSelectedTabIndex(0);
+    setTabDeleteUndoStack([]);
+    dontChangeEditor = true;
     editorRef.current.setValue("");
     setCurrentSignalData([]);
     setCurrentAnnotationData([]);
@@ -290,16 +398,38 @@ export default function Dashboard() {
     // const proceed = window.confirm("Opening a file will replace the current data. Do you want to continue?");
     // if(~proceed){return null;}
 
-    try{
-      openJSONFile().then((data) => {
-        const normalized = data.map((tab) => ({ ...tab, annotation: tab.annotation || [] }));
+    openJSONFile()
+      .then((data) => {
+        if (!Array.isArray(data) || data.length === 0) {
+          throw new Error("This file does not contain any tabs.");
+        }
+
+        const normalized = data.map((tab, i) => ({
+          name: typeof tab?.name === "string" ? tab.name : `Tab ${i + 1}`,
+          waveform: Array.isArray(tab?.waveform) ? tab.waveform : [],
+          annotation: Array.isArray(tab?.annotation) ? tab.annotation : [],
+        }));
+
+        // A file can be hand edited or written by an older version, and an
+        // invalid waveform would otherwise only surface as a failed render.
+        normalized.forEach((tab, i) => {
+          try {
+            if (tab.waveform.length > 0) checkError(tab.waveform);
+          } catch (err) {
+            throw new Error(`Tab ${i + 1} ("${tab.name}"): ${err.message}`);
+          }
+        });
+
         setAllTabsData(normalized);
-        setCurrentAnnotationData(normalized[0].annotation || []);
-        editorRef.current.setValue(parse2String(normalized[0].waveform));
-        setCurrentSignalData(normalized[0].waveform);
+        // The old selection can point past the end of the file just opened.
+        setSelectedTabIndex(0);
+        setTabDeleteUndoStack([]);
+        loadTabIntoEditor(normalized[0]);
+      })
+      .catch((err) => {
+        if (err?.message === "No file selected") return;
+        alert(err?.message || err);
       });
-    }catch(err)
-    {alert(err);}
   }
   const handleSaveFile = () =>
   {
@@ -314,10 +444,11 @@ export default function Dashboard() {
   const handleSaveSVG = () =>
   {
     try{
-      const combinedSvg = getSVG();
-
-      const serializer = new XMLSerializer();
-      const svgString = serializer.serializeToString(combinedSvg);
+      const svgString = getSVGString();
+      if (!svgString) {
+        alert("Waveform is not ready to export yet.");
+        return;
+      }
 
       const blob = new Blob([svgString], { type: "image/svg+xml" });
       const url = URL.createObjectURL(blob);
@@ -337,9 +468,12 @@ export default function Dashboard() {
   const handleSavePng = () => {
     try{
     const combinedSvg = getSVG();
-    const serializer = new XMLSerializer();
-    const svgString = serializer.serializeToString(combinedSvg);
-    
+    if (!combinedSvg) {
+      alert("Waveform is not ready to export yet.");
+      return;
+    }
+    const svgString = serializeSvg(combinedSvg);
+
     const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
 
@@ -369,8 +503,33 @@ export default function Dashboard() {
     }
   }
 
-  const handleMode2Signal = () => {dontChangeEditor=true;setDashboardMode("signal"); editorRef.current.setValue(parse2String(currentSignalData));}
-  const handleMode2Annotation = () => {dontChangeEditor=true;setDashboardMode("annotation");setAnnoState(0);editorRef.current.setValue(parse2String(currentAnnotationData));}
+  const handleCopySvg = async () => {
+    try {
+      const svgString = getSVGString();
+      if (!svgString) {
+        alert("Waveform is not ready to copy yet.");
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(svgString);
+        return;
+      }
+
+      // Fallback for older browsers
+      const textarea = document.createElement("textarea");
+      textarea.value = svgString;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    } catch (err) {
+      alert(err?.message || err);
+    }
+  };
 
   const [prefOpen, setPrefOpen] = useState(false);
   const handleOpenPreferences = () => setPrefOpen(true);
@@ -415,6 +574,8 @@ export default function Dashboard() {
     });
   };
 
+  const handleAnnotationDelete = handleBreakDelete;
+
   return (
     <Container
       maxWidth={false}
@@ -449,9 +610,17 @@ export default function Dashboard() {
               <polygon points="25,40 40,10 10,10" fill="#74b2cf8a" />
             </svg>
           </Box>
-          <Typography variant="h4" color="white">
+          <Typography variant="h4" color="white" sx={{ flex: 1 }}>
             WaveReact
           </Typography>
+          <IconButton
+            aria-label="Copy waveform image"
+            title="Copy waveform image"
+            onClick={handleCopySvg}
+            sx={{ color: "#e5e7eb" }}
+          >
+            <ContentCopyIcon />
+          </IconButton>
         </Box>
 
         {/* Navbar */}
@@ -471,6 +640,16 @@ export default function Dashboard() {
                     {label : "Save ", onClick : handleSaveFile},
                     {label : "Save as SVG", onClick : handleSaveSVG},
                     {label : "Save as PNG", onClick : handleSavePng}
+            ]}
+          />
+          <NavBar
+            title="Edit"
+            items={[
+              {
+                label: "Undo",
+                onClick: handleUndoTabDelete,
+                disabled: tabDeleteUndoStack.length === 0,
+              },
             ]}
           />
           <NavBar
@@ -541,6 +720,7 @@ export default function Dashboard() {
               minHeight: 0,
             }}
           >
+            <DiagramErrorBoundary resetKey={currentSignalData}>
             <WaveFormWindow
               signals={currentSignalData}
               anno={currentAnnotationData}
@@ -554,11 +734,15 @@ export default function Dashboard() {
               mouseDownSVG={mouseDownSVG}
               mouseUpSVG={mouseUpSVG}
               annotationMode={annotationTool}
+              curveP1={annotationTool === "curve" && annoState >= 1 ? curveP1 : null}
+              curveP2={annotationTool === "curve" && annoState >= 2 ? curveP2 : null}
               breakMode={breakTool}
               onAnnotationUpdate={handleAnnotationUpdate}
+              onAnnotationDelete={handleAnnotationDelete}
               onBreakUpdate={handleBreakUpdate}
               onBreakDelete={handleBreakDelete}
             />
+            </DiagramErrorBoundary>
           </Box>
           {/* Drag handle */}
           <Box

@@ -174,7 +174,10 @@ export default function WaveformTools({
           <ToggleButton value="annotation:add" sx={BTN}>
             add
           </ToggleButton>
-          <ToggleButton value="annotation:edit" sx={BTN}>
+          <ToggleButton value="annotation:curve" sx={BTN}>
+            curve
+          </ToggleButton>
+          <ToggleButton value="annotation:edit" sx={{ ...BTN, gridColumn: "span 2" }}>
             edit
           </ToggleButton>
         </Box>

@@ -103,7 +103,7 @@ export function standardizeSignal(signals)
                 continue;
             } 
         else {
-            var name = Object.keys(signals[i]).includes("phase") ? signals[i].name : " ";
+            var name = Object.keys(signals[i]).includes("name") ? signals[i].name : " ";
             var phase = Object.keys(signals[i]).includes("phase") ? parseInt(signals[i].phase) : 0;
             var signal = Object.keys(signals[i]).includes("wave") ? expandWavePattern(signals[i].wave) : " ";
             var data = Object.keys(signals[i]).includes("data") ? preprocessDataKey(signals[i].data) : "";
@@ -111,7 +111,7 @@ export function standardizeSignal(signals)
             var scale = Object.keys(signals[i]).includes("scale") && signals[i].scale !== " " && signals[i].scale !== ""?  signals[i].scale : 1;
 
             const phaseActual = isNaN(phase) ? 0 : ( phase > 10 ? 10 : (phase < -10 ? -10 : phase));
-            const newSignal = {name : name, wave : signal, data : data, scale : scale, phase : phaseActual, width : lineWidth};
+            const newSignal = {name : name, wave : signal, data : data, scale : scale, phase : phaseActual, width : lineWidth, color : signals[i].color};
             standardSignal.push(newSignal);
         }
         
@@ -121,8 +121,12 @@ export function standardizeSignal(signals)
 
 function preprocessDataKey(input) {
 
+  // The user guide writes labels as a list, the editor writes them as one
+  // comma separated string. Both mean the same thing.
+  const source = Array.isArray(input) ? input.join(",") : String(input ?? "");
+
   // Split only by comma (top-level)
-  const segments = input.split(",");
+  const segments = source.split(",");
 
   const finalParts = [];
 
@@ -194,9 +198,13 @@ function expandDataPatterns(segment) {
  * expands patterns liike (a, 3) to aaa
  * @param {string} input Input code string from the wave key of the waveform
 */
+/** A wave longer than this cannot be read anyway, and drawing it hangs the tab. */
+const MAX_WAVE_LENGTH = 10000;
+
 export function expandWavePattern(input) {
-  return input.replace(/\(([^,]+),\s*(\d+)\)/g, (_, pattern, count) => {
-    return pattern.repeat(parseInt(count));
+  return String(input ?? "").replace(/\(([^,]+),\s*(\d+)\)/g, (_, pattern, count) => {
+    const repeats = Math.min(parseInt(count), Math.ceil(MAX_WAVE_LENGTH / pattern.length));
+    return pattern.repeat(Math.max(0, repeats));
   });
 }
 

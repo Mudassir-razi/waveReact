@@ -3,7 +3,8 @@ import SignalWindow from "./signal";
 import { TimeRuler } from "./grid";
 import { flattenSignals } from "../core/parser";
 import { combineAndSaveSVG } from "./fileSys";
-import { useState, useEffect, useRef } from "react";
+import { serializeSvg } from "./svgOptimizer";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import {
   getHierarchy,
   getSignalNames,
@@ -15,8 +16,27 @@ import {
 import { Box } from "@mui/material";
 import { useAppConfig } from "../core/config";
 
-var finalSVG;
-export function getSVG(){return finalSVG;}
+let svgRefs = { signal: null, ruler: null, name: null, darkMode: true };
+
+const EXPORT_OPTIONS = { crop: true, optimize: true };
+
+/**
+ * Builds the exportable document: cropped to the drawn waveform and rewritten
+ * into compact markup. The live canvas is untouched.
+ * @returns {SVGSVGElement|null}
+ */
+export function getSVG() {
+  const { signal, ruler, name, darkMode } = svgRefs;
+  if (!signal || !ruler || !name) return null;
+  return combineAndSaveSVG(signal, ruler, name, darkMode, EXPORT_OPTIONS);
+}
+
+/**
+ * @returns {string} Serialized, compressed SVG ready to save or paste.
+ */
+export function getSVGString() {
+  return serializeSvg(getSVG());
+}
 
 export default function WaveFormWindow({
     signals,
@@ -29,8 +49,11 @@ export default function WaveFormWindow({
     mouseDownSVG,
     mouseUpSVG,
     annotationMode,
+    curveP1,
+    curveP2,
     breakMode,
     onAnnotationUpdate,
+    onAnnotationDelete,
     onBreakUpdate,
     onBreakDelete,
 })
@@ -39,23 +62,30 @@ export default function WaveFormWindow({
     //To calculate viewport size
     const containerRef = useRef(null);
     const config = useAppConfig().config;
-    const[viewport, setViewport] = useState({});
+    // Kept as state only so a resize triggers a redraw at the new size.
+    const[, setViewport] = useState({});
     //.....................................Custom scroll....................
     const scrollRef = useRef(null);
+    const scrollBoxRef = useRef(null);
     const rulerRef = useRef(null);
     const namesRef = useRef(null);
 
+    // The pane around the canvas is what scrolls, not the canvas itself, and a
+    // scroll event does not bubble out of it. Listening anywhere else leaves
+    // the ruler and the name column behind when the diagram is panned.
     useEffect(() => {
-        const node = scrollRef.current;
+        const node = scrollBoxRef.current;
+        if (!node) return undefined;
 
         const handleScroll = () => {
         const { scrollTop, scrollLeft } = node;
 
-        rulerRef.current.style.transform =
-            `translateX(${-scrollLeft}px)`;
-
-        namesRef.current.style.transform =
-            `translateY(${-scrollTop}px)`;
+        if (rulerRef.current) {
+            rulerRef.current.style.transform = `translateX(${-scrollLeft}px)`;
+        }
+        if (namesRef.current) {
+            namesRef.current.style.transform = `translateY(${-scrollTop}px)`;
+        }
         };
 
         node.addEventListener("scroll", handleScroll);
@@ -100,11 +130,24 @@ export default function WaveFormWindow({
     const totalHeight = (standardSignal.length+1) * (config.dy + config.offsetY);
     const totalWidth = (maxWaveLength+3) * config.dx;
 
-    //console.log(nameDivWidth, config.indentPerLevel, maxLevel);
-    //after rendering, combine all and store it for saving
-    useEffect(() => {
-        finalSVG = combineAndSaveSVG(scrollRef.current, rulerRef.current, namesRef.current, totalWidth, totalHeight);
-    }, [totalWidth, totalHeight]);
+    // Only the layer refs are recorded here; the export document is built on
+    // demand so editing does not pay for a full tree clone on every keystroke.
+    useLayoutEffect(() => {
+        svgRefs = {
+          signal: scrollRef.current,
+          ruler: rulerRef.current,
+          name: namesRef.current,
+          darkMode: config.darkMode ?? true,
+        };
+    }, [
+        totalWidth,
+        totalHeight,
+        signals,
+        anno,
+        config.darkMode,
+        maxWaveLength,
+        standardSignal.length,
+    ]);
 
     return (
         <Box
@@ -165,6 +208,7 @@ export default function WaveFormWindow({
 
             {/* MAIN SCROLL OWNER */}
             <Box
+            ref={scrollBoxRef}
             sx={{
                 flex: 1,
                 overflow: "auto",
@@ -191,8 +235,11 @@ export default function WaveFormWindow({
                 end={end}
                 foot={foot}
                 annotationMode={annotationMode}
+                curveP1={curveP1}
+                curveP2={curveP2}
                 breakMode={breakMode}
                 onAnnotationUpdate={onAnnotationUpdate}
+                onAnnotationDelete={onAnnotationDelete}
                 onBreakUpdate={onBreakUpdate}
                 onBreakDelete={onBreakDelete}
             />

@@ -7,7 +7,6 @@ import { getSegmentPointIndices } from "./segmentBuilder.js";
 
 //Global variables
 let LUT = null;
-let offsetY = 0;
 let offsetX = 0;
 let crisp = true;
 
@@ -27,7 +26,6 @@ export function initRender(dx_, dy_, div_, offsetY_, scale_=1, crisp_=true)
 {
   LUT = getDictionary(dx_, dy_, div_, offsetY_, scale_);
   shapeFragments = null;
-  offsetY = offsetY_;
   crisp = crisp_;
 }
 

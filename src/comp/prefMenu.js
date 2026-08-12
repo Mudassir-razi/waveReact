@@ -21,8 +21,21 @@ const MAX_VALUES = {
   offsetX: 200,
   indentPerLevel: 200,
   rulerHeight: 100,
+  rulerLabelInterval: 50,
   charWidth: 30,
   nameStart: 100,
+};
+
+// Sizes that the layout divides by, or that the diagram cannot be drawn
+// without, need a floor above zero.
+const MIN_VALUES = {
+  dx: 4,
+  dy: 4,
+  timeStamp: 1,
+  signalCount: 1,
+  rulerHeight: 12,
+  rulerLabelInterval: 1,
+  charWidth: 4,
 };
 
 export default function PrefMenu({ open, onClose }) {
@@ -37,8 +50,9 @@ export default function PrefMenu({ open, onClose }) {
 
   const handleAdjust = (key, delta) => {
     const max = MAX_VALUES[key] ?? 500;
+    const min = MIN_VALUES[key] ?? 0;
     const current = Number(draft[key]) || 0;
-    const next = Math.min(max, Math.max(0, current + delta));
+    const next = Math.min(max, Math.max(min, current + delta));
     setDraft((prev) => ({ ...prev, [key]: next }));
   };
 

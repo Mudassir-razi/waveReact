@@ -1,85 +1,104 @@
+import {
+  measureContentBounds,
+  optimizeSvgElement,
+} from "./svgOptimizer";
+
+/**
+ * Merges the name panel, the time ruler and the waveform canvas into one
+ * standalone SVG document.
+ *
+ * @param {SVGSVGElement} signalSvg Waveform canvas layer.
+ * @param {SVGSVGElement} rulerSvg Time ruler layer.
+ * @param {SVGSVGElement} nameSvg Signal name panel layer.
+ * @param {boolean} darkMode Selects the background colour.
+ * @param {{crop?: boolean, optimize?: boolean, padding?: number, optimizeOptions?: object}} [exportOptions]
+ *   `crop` shrinks the document to the drawn content instead of the editing
+ *   canvas, `optimize` compresses the markup. Both are meant for export only;
+ *   they cost a layout pass and a full tree rewrite.
+ * @returns {SVGSVGElement|null}
+ */
 export function combineAndSaveSVG(
   signalSvg,
   rulerSvg,
   nameSvg,
-  totalWidth,
-  totalHeight,
-  filename = "combined.svg"
+  darkMode = true,
+  exportOptions = {}
 ) {
   const SVG_NS = "http://www.w3.org/2000/svg";
+  const {
+    crop = false,
+    optimize = false,
+    padding = 2,
+    optimizeOptions,
+  } = exportOptions;
 
   if (!signalSvg || !rulerSvg || !nameSvg) {
     console.warn("Missing SVG refs");
-    return;
+    return null;
   }
 
-  // Extract dimensions safely
-  const nameWidth =
-    signalNumber(nameSvg.getAttribute("width"));
+  const nameWidth = signalNumber(nameSvg.getAttribute("width"));
+  const signalWidth = signalNumber(signalSvg.getAttribute("width"));
+  const signalHeight = signalNumber(signalSvg.getAttribute("height"));
+  const rulerHeight = signalNumber(rulerSvg.getAttribute("height"));
 
-  const signalWidth =
-    signalNumber(signalSvg.getAttribute("width"));
+  let combinedWidth = nameWidth + signalWidth;
+  let combinedHeight = rulerHeight + signalHeight;
 
-  const nameHeight =
-    signalNumber(nameSvg.getAttribute("height"));
-
-  const signalHeight =
-    signalNumber(signalSvg.getAttribute("height"));
-  
-  const rulerHeight = 
-    signalNumber(rulerSvg.getAttribute("height"));
-
-  const height = signalHeight + 70;
-
-  // Create combined root
   const combinedSvg = document.createElementNS(SVG_NS, "svg");
   combinedSvg.setAttribute("xmlns", SVG_NS);
-  combinedSvg.setAttribute("width", totalWidth);
-  combinedSvg.setAttribute("height", totalHeight);
-  combinedSvg.setAttribute("viewBox", `0 0 ${totalWidth} ${totalHeight}`);
 
-  // Background
-  const bg = document.createElementNS(SVG_NS, "rect");
-  bg.setAttribute("width", totalWidth);
-  bg.setAttribute("height", height);
-  bg.setAttribute("fill", "#292929");
-  combinedSvg.appendChild(bg);
-
-  // Helper to copy children safely
-  function appendSvgContent(sourceSvg, offsetX = 0, offsetY=0) {
+  function appendSvgContent(sourceSvg, offsetX = 0, offsetY = 0) {
     const group = document.createElementNS(SVG_NS, "g");
     group.setAttribute("transform", `translate(${offsetX}, ${offsetY})`);
 
-    Array.from(sourceSvg.childNodes).forEach(node => {
-      group.appendChild(node.cloneNode(true));
+    Array.from(sourceSvg.childNodes).forEach((node) => {
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      if (node.getAttribute?.("id") === "cursor-preview") return;
+
+      const clone = node.cloneNode(true);
+      clone.querySelector?.("#cursor-preview")?.remove();
+      group.appendChild(clone);
     });
 
     combinedSvg.appendChild(group);
   }
 
-  // Append name area
+  // The name panel is laid out beside the ruler rather than below it, and its
+  // labels already carry the ruler offset in their own coordinates, so it goes
+  // in unshifted. Only the waveform canvas sits below the ruler.
   appendSvgContent(nameSvg, 0, 0);
-
-  // Append ruler
   appendSvgContent(rulerSvg, nameWidth, 0);
-
-  // Append signal
   appendSvgContent(signalSvg, nameWidth, rulerHeight);
 
+  // Compress first: dropping the invisible nodes keeps them from inflating the
+  // measured extent, and the background is added afterwards so it cannot
+  // define the bounds itself.
+  if (optimize) optimizeSvgElement(combinedSvg, optimizeOptions);
+
+  if (crop) {
+    const bounds = measureContentBounds(combinedSvg);
+    if (bounds) {
+      combinedWidth = clampSize(bounds.maxX + padding, combinedWidth);
+      combinedHeight = clampSize(bounds.maxY + padding, combinedHeight);
+    }
+  }
+
+  combinedSvg.setAttribute("width", combinedWidth);
+  combinedSvg.setAttribute("height", combinedHeight);
+  combinedSvg.setAttribute("viewBox", `0 0 ${combinedWidth} ${combinedHeight}`);
+
+  const bg = document.createElementNS(SVG_NS, "rect");
+  bg.setAttribute("width", combinedWidth);
+  bg.setAttribute("height", combinedHeight);
+  bg.setAttribute("fill", darkMode ? "#111" : "#fff");
+  combinedSvg.insertBefore(bg, combinedSvg.firstChild);
+
   return combinedSvg;
-  // Serialize & download
-  // const serializer = new XMLSerializer();
-  // const svgString = serializer.serializeToString(combinedSvg);
+}
 
-  // const blob = new Blob([svgString], { type: "image/svg+xml" });
-  // const url = URL.createObjectURL(blob);
-
-  // const link = document.createElement("a");
-  // link.href = url;
-  // link.download = filename;
-  // link.click();
-
-  // URL.revokeObjectURL(url);
+function clampSize(value, limit) {
+  return Math.max(1, Math.min(limit, Math.ceil(value)));
 }
 
 function signalNumber(value) {
@@ -93,7 +112,7 @@ function signalNumber(value) {
  * @param {string} filename -name of the file 
  */
 export function saveJSONFile(data, filename = "data.json") {
-  const json = JSON.stringify(data, null, 2); // pretty-print with 2-space indent
+  const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
 
@@ -102,7 +121,7 @@ export function saveJSONFile(data, filename = "data.json") {
   a.download = filename;
   a.click();
 
-  URL.revokeObjectURL(url); // cleanup
+  URL.revokeObjectURL(url);
 }
 
 
